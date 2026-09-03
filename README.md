@@ -74,7 +74,7 @@ For Hardware:
 
 ### Project Demo
 # Video
-[▶️ Watch Demo on YouTube / Drive](#)
+[▶️ Watch Demo ](docs/Screen%20Recording%202026-09-03%20223352.mp4)
 *Real-time face tracking, emotional state transitions across 11 states, shy mode, passive-aggressive voice commentary (English & Malayalam), Neon Void theme toggle, and leaderboard.*
 
 # Additional Demos

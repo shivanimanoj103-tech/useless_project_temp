@@ -54,7 +54,7 @@ export function DebugPanel({
   sneakPeekCooldown, setSneakPeekCooldown,
   sneakPeekInfo,
   // Realistic Tears Settings
-  tearSettings, setTearSettings,
+  tearSettings, setTearSettings, onResetTearPosition,
   // Background Gradient Settings
   bgSettings, setBgSettings,
   // Black Blur Depth Settings
@@ -65,6 +65,7 @@ export function DebugPanel({
   onOpenAddDialogueModal,
   onEditDialogue,
   onDeleteDialogue,
+  onTriggerTestVoice,
 }) {
   const [speed, setSpeedLocal] = useState(1);
   const [availableVoices, setAvailableVoices] = useState([]);
@@ -96,9 +97,9 @@ export function DebugPanel({
         </button>
       </div>
 
-      {/* ── 1. REALISTIC EYES ── */}
+      {/* ── 1. REALISTIC TEARS & ORIGIN CONTROLS ── */}
       <section className="db-section">
-        <h4 className="db-heading">Realistic Tears & Moisture</h4>
+        <h4 className="db-heading">Realistic Tears & Duct Origin</h4>
         <Slider
           label={`Tear Intensity: ${tearSettings.tearIntensity.toFixed(2)}`}
           min={0.0} max={1.0} step={0.05}
@@ -118,10 +119,28 @@ export function DebugPanel({
           onChange={(v) => setTearSettings((prev) => ({ ...prev, tearFlowSpeed: v }))}
         />
         <Slider
-          label={`Tear Drop Probability: ${tearSettings.tearDropProb.toFixed(2)}`}
+          label={`Tear Size: ${tearSettings.tearSize.toFixed(1)}x`}
+          min={1.0} max={3.0} step={0.1}
+          value={tearSettings.tearSize}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, tearSize: v }))}
+        />
+        <Slider
+          label={`Tear Gravity: ${tearSettings.tearGravity.toFixed(1)}x`}
+          min={0.5} max={2.0} step={0.1}
+          value={tearSettings.tearGravity}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, tearGravity: v }))}
+        />
+        <Slider
+          label={`Tear Opacity: ${tearSettings.tearOpacity.toFixed(2)}`}
+          min={0.1} max={1.0} step={0.05}
+          value={tearSettings.tearOpacity}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, tearOpacity: v }))}
+        />
+        <Slider
+          label={`Tear Detachment: ${tearSettings.tearDetachment.toFixed(2)}`}
           min={0.0} max={1.0} step={0.05}
-          value={tearSettings.tearDropProb}
-          onChange={(v) => setTearSettings((prev) => ({ ...prev, tearDropProb: v }))}
+          value={tearSettings.tearDetachment}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, tearDetachment: v }))}
         />
         <Slider
           label={`Eye Wetness Sheen: ${tearSettings.eyeWetness.toFixed(2)}`}
@@ -129,9 +148,37 @@ export function DebugPanel({
           value={tearSettings.eyeWetness}
           onChange={(v) => setTearSettings((prev) => ({ ...prev, eyeWetness: v }))}
         />
+
+        <h5 className="db-sub">Tear Duct Origin Offsets</h5>
+        <Slider
+          label={`Origin X Offset: ${tearSettings.originX}px`}
+          min={-30} max={30} step={1}
+          value={tearSettings.originX}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, originX: v }))}
+        />
+        <Slider
+          label={`Origin Y Offset: ${tearSettings.originY}px`}
+          min={-30} max={30} step={1}
+          value={tearSettings.originY}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, originY: v }))}
+        />
+        <Slider
+          label={`Origin Z Scale: ${tearSettings.originZ.toFixed(2)}`}
+          min={0.5} max={2.0} step={0.05}
+          value={tearSettings.originZ}
+          onChange={(v) => setTearSettings((prev) => ({ ...prev, originZ: v }))}
+        />
+
+        <button
+          className="btn-ghost db-add-dlg-btn"
+          onClick={onResetTearPosition}
+          style={{ marginTop: '6px' }}
+        >
+          🔄 Reset Tear Position
+        </button>
       </section>
 
-      {/* ── 2. EMOTION BACKGROUND GRADIENT ── */}
+      {/* ── 2. BACKGROUND GRADIENT ── */}
       <section className="db-section">
         <h4 className="db-heading">Background Gradient</h4>
         <Row label="Emotion Gradient">
@@ -179,7 +226,7 @@ export function DebugPanel({
         />
       </section>
 
-      {/* ── 4. EMOTIONAL DIALOGUE & SPEECH ── */}
+      {/* ── 4. EMOTIONAL DIALOGUE & SPEECH CONTROLS ── */}
       <section className="db-section">
         <h4 className="db-heading">Emotional Dialogue & TTS</h4>
         <button
@@ -189,18 +236,25 @@ export function DebugPanel({
           💬 + Add Emotional Dialog
         </button>
 
+        {/* Language Selection Buttons */}
         <Row label="Language">
-          <select
-            value={dialogueSettings.language}
-            onChange={(e) => setDialogueSettings((prev) => ({ ...prev, language: e.target.value }))}
-            className="db-select"
-          >
-            <option value="en">English (🇬🇧/🇺🇸)</option>
-            <option value="ml">Malayalam (മലയാളം)</option>
-          </select>
+          <div className="db-lang-toggle">
+            <button
+              className={`db-force-btn ${dialogueSettings.language === 'en' ? 'db-force-btn--active' : ''}`}
+              onClick={() => setDialogueSettings((prev) => ({ ...prev, language: 'en' }))}
+            >
+              English
+            </button>
+            <button
+              className={`db-force-btn ${dialogueSettings.language === 'ml' ? 'db-force-btn--active' : ''}`}
+              onClick={() => setDialogueSettings((prev) => ({ ...prev, language: 'ml' }))}
+            >
+              മലയാളം
+            </button>
+          </div>
         </Row>
 
-        <Row label="Speech TTS">
+        <Row label="Auto Read">
           <button
             className={`db-force-btn ${dialogueSettings.speechEnabled ? 'db-force-btn--active' : ''}`}
             onClick={() => setDialogueSettings((prev) => ({ ...prev, speechEnabled: !prev.speechEnabled }))}
@@ -218,7 +272,7 @@ export function DebugPanel({
           </button>
         </Row>
 
-        <h5 className="db-sub">TTS Voice Selection</h5>
+        <h5 className="db-sub">Voice Selection</h5>
         <select
           value={dialogueSettings.selectedVoiceURI}
           onChange={(e) => setDialogueSettings((prev) => ({ ...prev, selectedVoiceURI: e.target.value }))}
@@ -232,6 +286,14 @@ export function DebugPanel({
           ))}
         </select>
 
+        {/* Volume Slider (0 - 100%) */}
+        <Slider
+          label={`Volume: ${dialogueSettings.speechVolume}%`}
+          min={0} max={100} step={1}
+          value={dialogueSettings.speechVolume}
+          onChange={(v) => setDialogueSettings((prev) => ({ ...prev, speechVolume: v }))}
+        />
+
         <Slider
           label={`Speech Rate: ${dialogueSettings.speechRate.toFixed(1)}x`}
           min={0.5} max={2.0} step={0.1}
@@ -244,20 +306,17 @@ export function DebugPanel({
           value={dialogueSettings.speechPitch}
           onChange={(v) => setDialogueSettings((prev) => ({ ...prev, speechPitch: v }))}
         />
-        <Slider
-          label={`Speech Volume: ${dialogueSettings.speechVolume.toFixed(2)}`}
-          min={0.0} max={1.0} step={0.05}
-          value={dialogueSettings.speechVolume}
-          onChange={(v) => setDialogueSettings((prev) => ({ ...prev, speechVolume: v }))}
-        />
-        <Slider
-          label={`Dialogue Cooldown: ${dialogueSettings.dialogueCooldown}s`}
-          min={1} max={15} step={1}
-          value={dialogueSettings.dialogueCooldown}
-          onChange={(v) => setDialogueSettings((prev) => ({ ...prev, dialogueCooldown: v }))}
-        />
 
-        {/* Dialogues Bank List */}
+        {/* Test Voice Button */}
+        <button
+          className="btn-primary db-add-dlg-btn"
+          onClick={onTriggerTestVoice}
+          style={{ marginTop: '8px', background: 'linear-gradient(135deg, #2ecc71, #27ae60)' }}
+        >
+          🔊 Test Voice
+        </button>
+
+        {/* Dialogue Bank List */}
         <h5 className="db-sub">Dialogue Bank ({dialogues.length})</h5>
         <div className="db-dlg-list">
           {dialogues.map((d) => (

@@ -37,6 +37,31 @@ const EMOTION_GRADIENTS = {
   peak_uncomfortable: { c1: '#7f1d1d', c2: '#090514' },
 };
 
+const DEFAULT_TEAR_SETTINGS = {
+  tearIntensity: 0.6,
+  tearFormationSpeed: 1.0,
+  tearFlowSpeed: 1.0,
+  tearSize: 1.5,
+  tearGravity: 1.0,
+  tearOpacity: 0.85,
+  tearDetachment: 0.5,
+  originX: 0,
+  originY: 0,
+  originZ: 1.0,
+  eyeWetness: 0.6,
+};
+
+const DEFAULT_DIALOGUE_SETTINGS = {
+  language: 'en',
+  speechEnabled: true,
+  speechRate: 0.9,
+  speechPitch: 1.0,
+  speechVolume: 70, // 0 to 100%
+  selectedVoiceURI: '',
+  showSubtitles: true,
+  dialogueCooldown: 6,
+};
+
 export default function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -44,6 +69,7 @@ export default function App() {
   const [sessionSaved, setSessionSaved] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [testVoiceTrigger, setTestVoiceTrigger] = useState(0);
 
   // ── Persistent Settings (LocalStorage) ───────────────────────────────────
   const [dialogues, setDialogues] = useState(() => {
@@ -56,8 +82,8 @@ export default function App() {
   const [tearSettings, setTearSettings] = useState(() => {
     try {
       const raw = localStorage.getItem('needy_tear_settings');
-      return raw ? JSON.parse(raw) : { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 };
-    } catch (_) { return { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 }; }
+      return raw ? { ...DEFAULT_TEAR_SETTINGS, ...JSON.parse(raw) } : DEFAULT_TEAR_SETTINGS;
+    } catch (_) { return DEFAULT_TEAR_SETTINGS; }
   });
 
   const [bgSettings, setBgSettings] = useState(() => {
@@ -77,8 +103,8 @@ export default function App() {
   const [dialogueSettings, setDialogueSettings] = useState(() => {
     try {
       const raw = localStorage.getItem('needy_dialogue_settings');
-      return raw ? JSON.parse(raw) : { language: 'en', speechEnabled: true, speechRate: 0.9, speechPitch: 1.0, speechVolume: 1.0, selectedVoiceURI: '', showSubtitles: true, dialogueCooldown: 6 };
-    } catch (_) { return { language: 'en', speechEnabled: true, speechRate: 0.9, speechPitch: 1.0, speechVolume: 1.0, selectedVoiceURI: '', showSubtitles: true, dialogueCooldown: 6 }; }
+      return raw ? { ...DEFAULT_DIALOGUE_SETTINGS, ...JSON.parse(raw) } : DEFAULT_DIALOGUE_SETTINGS;
+    } catch (_) { return DEFAULT_DIALOGUE_SETTINGS; }
   });
 
   // Save settings to LocalStorage on update
@@ -165,6 +191,15 @@ export default function App() {
 
   function handleDeleteDialogue(id) {
     setDialogues((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  function handleResetTearPosition() {
+    setTearSettings((prev) => ({
+      ...prev,
+      originX: 0,
+      originY: 0,
+      originZ: 1.0,
+    }));
   }
 
   return (
@@ -304,6 +339,7 @@ export default function App() {
         speechVolume={dialogueSettings.speechVolume}
         selectedVoiceURI={dialogueSettings.selectedVoiceURI}
         dialogueCooldown={dialogueSettings.dialogueCooldown}
+        testVoiceTrigger={testVoiceTrigger}
         onSubtitleChange={setSubtitleData}
       />
 
@@ -338,6 +374,7 @@ export default function App() {
           sneakPeekInfo={sneakPeekInfo}
           tearSettings={tearSettings}
           setTearSettings={setTearSettings}
+          onResetTearPosition={handleResetTearPosition}
           bgSettings={bgSettings}
           setBgSettings={setBgSettings}
           blurSettings={blurSettings}
@@ -349,6 +386,7 @@ export default function App() {
           onOpenAddDialogueModal={() => { setEditingDialogue(null); setIsDialogueModalOpen(true); }}
           onEditDialogue={(dlg) => { setEditingDialogue(dlg); setIsDialogueModalOpen(true); }}
           onDeleteDialogue={handleDeleteDialogue}
+          onTriggerTestVoice={() => setTestVoiceTrigger((v) => v + 1)}
         />
       )}
 

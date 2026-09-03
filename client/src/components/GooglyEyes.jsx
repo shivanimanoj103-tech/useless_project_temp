@@ -5,7 +5,6 @@ const BG = '#0d0618';
 
 /**
  * Visual configuration per emotional state.
- * Includes eyelid top/bottom ratios, pupil size, iris hue, wander distance, and lerp speed.
  */
 const STATE_CONFIGS = {
   friendly: { lidT: 0.05, lidB: 0.38, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
@@ -20,7 +19,6 @@ const STATE_CONFIGS = {
   peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.25, lerpSpd: 0.10, dartEvery: 30 },
 };
 
-// ── Math & Color Helpers ────────────────────────────────────────────────────
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 function hexParts(hex) {
@@ -42,12 +40,12 @@ function drawEyeMoisture(ctx, cx, cy, R, wetnessLevel) {
   ctx.save();
   ctx.globalAlpha = Math.min(0.85, wetnessLevel * 0.7);
 
-  // Gloss arc along bottom eyelid contour
+  // Gloss arc along lower inner eye surface boundary
   ctx.beginPath();
-  ctx.arc(cx, cy + R * 0.3, R * 0.72, 0.1 * Math.PI, 0.9 * Math.PI);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-  ctx.lineWidth = Math.max(1.5, R * 0.04 * wetnessLevel);
-  ctx.shadowColor = 'rgba(186, 230, 253, 0.8)';
+  ctx.arc(cx, cy + R * 0.35, R * 0.68, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = Math.max(1.5, R * 0.045 * wetnessLevel);
+  ctx.shadowColor = 'rgba(186, 230, 253, 0.9)';
   ctx.shadowBlur = 8;
   ctx.stroke();
 
@@ -83,8 +81,8 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink, wetness
   // Pupil & Iris position
   const epx = cx + px * R * 0.44;
   const epy = cy + py * R * 0.44;
-  const iR = R * pupR * 1.55; // Iris radius
-  const pR = R * pupR;        // Pupil radius
+  const iR = R * pupR * 1.55;
+  const pR = R * pupR;
 
   // Iris gradient
   const ig = ctx.createRadialGradient(epx - iR * 0.3, epy - iR * 0.3, 0, epx, epy, iR);
@@ -167,45 +165,54 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink, wetness
   ctx.restore();
 }
 
-// ── Render Realistic Liquid Tear Droplets ──────────────────────────────────
-function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings) {
+// ── Render Realistic Liquid Tears Originated from Inner Tear Duct ──────────
+function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings, R) {
   if (!tears || tears.length === 0) return;
 
   const flowSpd = tearSettings.tearFlowSpeed || 1.0;
+  const gravityScale = tearSettings.tearGravity || 1.0;
+  const opacitySetting = tearSettings.tearOpacity ?? 0.85;
 
   for (let i = tears.length - 1; i >= 0; i--) {
     const t = tears[i];
 
-    if (t.phase === 'forming') {
-      // Stage A: Accumulating tear at eye corner
-      t.size = lerp(t.size, t.maxSize, 0.05 * (tearSettings.tearFormationSpeed || 1.0));
+    if (t.phase === 'attached') {
+      // STAGE 1: Anchored directly on lower inner eye surface near tear duct
+      t.size = lerp(t.size, t.targetSize, 0.04 * (tearSettings.tearFormationSpeed || 1.0));
       t.accumTime += 0.016;
-      t.alpha = Math.min(0.9, t.accumTime * 2);
+      t.alpha = Math.min(opacitySetting, t.accumTime * 2);
 
-      if (t.size >= t.maxSize * 0.9) {
+      // Follow eye surface motion
+      t.x = t.getOriginX();
+      t.y = t.getOriginY();
+
+      // Transition from attached on sclera to flowing down cheek
+      if (t.size >= t.targetSize * 0.85) {
         t.phase = 'flowing';
+        t.startX = t.x;
+        t.startY = t.y;
       }
     } else if (t.phase === 'flowing') {
-      // Stage B: Flowing down following curved facial path
-      t.pathProgress += 0.008 * flowSpd;
-      t.wobble += 0.08;
-      const wobbleX = Math.sin(t.wobble) * 1.5;
+      // STAGE 2: Flowing down cheek surface following gravity
+      t.pathProgress += 0.007 * flowSpd;
+      t.wobble += 0.06;
+      const wobbleX = Math.sin(t.wobble) * 1.2;
 
       t.x = t.startX + wobbleX;
-      t.y = t.startY + t.pathProgress * 120;
-      t.elongation = 1.0 + t.pathProgress * 0.8;
+      t.y = t.startY + t.pathProgress * 130 * gravityScale;
+      t.elongation = 1.0 + t.pathProgress * 1.1;
 
-      // Stage D: Detach into falling drop
-      if (t.pathProgress >= 0.7 && Math.random() < (tearSettings.tearDropProb || 0.5) * 0.05) {
+      // STAGE 3: Detach into free-falling drop
+      if (t.pathProgress >= 0.65 && Math.random() < (tearSettings.tearDetachment ?? 0.5) * 0.04) {
         t.phase = 'falling';
-        t.vy = 2.0;
+        t.vy = 2.2 * gravityScale;
       }
     } else if (t.phase === 'falling') {
-      // Stage D: Free falling detached drop
+      // Free falling drop
       t.y += t.vy;
-      t.vy += 0.22; // gravity
-      t.alpha -= 0.02;
-      t.elongation = lerp(t.elongation, 1.4, 0.1);
+      t.vy += 0.25 * gravityScale;
+      t.alpha -= 0.022;
+      t.elongation = lerp(t.elongation, 1.5, 0.1);
     }
 
     if (t.y > ctx.canvas.height || t.alpha <= 0) {
@@ -213,30 +220,30 @@ function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings) {
       continue;
     }
 
-    // Render realistic fluid tear graphics
+    // Render realistic glossy liquid tear droplet
     ctx.save();
-    ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, discomfortLevel * 1.2));
+    ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, discomfortLevel * 1.25));
 
-    const rx = t.size;
-    const ry = t.size * (t.elongation || 1.0);
+    const rx = t.size * (tearSettings.originZ || 1.0);
+    const ry = t.size * (t.elongation || 1.0) * (tearSettings.originZ || 1.0);
 
-    // Subtle drop shadow behind liquid drop
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+    // Soft drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.22)';
     ctx.shadowBlur = 6;
     ctx.shadowOffsetY = 2;
 
-    // Fluid Teardrop Body (Bezier shape)
+    // Fluid Teardrop Body (Bezier shape anchored at eye duct)
     ctx.beginPath();
-    ctx.moveTo(t.x, t.y - ry);
-    ctx.bezierCurveTo(t.x + rx * 1.3, t.y, t.x + rx * 1.2, t.y + ry, t.x, t.y + ry);
-    ctx.bezierCurveTo(t.x - rx * 1.2, t.y + ry, t.x - rx * 1.3, t.y, t.x, t.y - ry);
+    ctx.moveTo(t.x, t.y - ry * 0.9);
+    ctx.bezierCurveTo(t.x + rx * 1.35, t.y, t.x + rx * 1.25, t.y + ry, t.x, t.y + ry);
+    ctx.bezierCurveTo(t.x - rx * 1.25, t.y + ry, t.x - rx * 1.35, t.y, t.x, t.y - ry * 0.9);
 
-    // Glassy transparent gradient (clear fluid with light refraction)
+    // Glassy liquid gradient with specular highlights
     const tg = ctx.createLinearGradient(t.x - rx, t.y - ry, t.x + rx, t.y + ry);
-    tg.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
-    tg.addColorStop(0.3, 'rgba(224, 242, 254, 0.35)');
-    tg.addColorStop(0.8, 'rgba(186, 230, 253, 0.45)');
-    tg.addColorStop(1, 'rgba(255, 255, 255, 0.8)');
+    tg.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+    tg.addColorStop(0.3, 'rgba(224, 242, 254, 0.40)');
+    tg.addColorStop(0.8, 'rgba(186, 230, 253, 0.50)');
+    tg.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
 
     ctx.fillStyle = tg;
     ctx.fill();
@@ -245,10 +252,10 @@ function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings) {
 
     // Surface tension meniscus outline
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.stroke();
 
-    // Glossy Specular Highlight (3D Curved sheen)
+    // Glossy Specular Highlight Dot
     ctx.beginPath();
     ctx.ellipse(t.x - rx * 0.35, t.y - ry * 0.35, rx * 0.3, ry * 0.25, -Math.PI / 4, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -263,7 +270,19 @@ export function GooglyEyes({
   state,
   eyeMovementSpeed = 0.08,
   sneakPeekInfo,
-  tearSettings = { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 }
+  tearSettings = {
+    tearIntensity: 0.6,
+    tearFormationSpeed: 1.0,
+    tearFlowSpeed: 1.0,
+    tearSize: 1.5,
+    tearGravity: 1.0,
+    tearOpacity: 0.85,
+    tearDetachment: 0.5,
+    originX: 0,
+    originY: 0,
+    originZ: 1.0,
+    eyeWetness: 0.6,
+  }
 }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
@@ -404,22 +423,36 @@ export function GooglyEyes({
       drawEye(ctx, lx, ey, R, { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.lpx, py: a.lpy, wetness });
       drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.rpx, py: a.rpy, wetness });
 
-      // ── Realistic Tear Formation & Flow ────────────────────────────────
+      // ── Precise Tear Formation at Lower Inner Eye Duct ───────────────────
       const intensity = tSet.tearIntensity || 0.6;
       if (discomfort > 0.15 && Math.random() < 0.08 * discomfort * intensity) {
         const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
-        const eyeX = eyeChoice === 'left' ? lx : rx;
-        // Corner of eye start
-        const startX = eyeX + (Math.random() > 0.5 ? R * 0.4 : -R * 0.4);
-        const startY = ey + R * 0.65;
+        const userOffX = tSet.originX || 0;
+        const userOffY = tSet.originY || 0;
+        const baseScale = tSet.tearSize || 1.5;
+
+        // Inner lower tear duct origin on eye surface
+        const getOriginX = () => {
+          if (eyeChoice === 'left') {
+            return lx + R * 0.38 + userOffX; // Inner duct facing nose
+          } else {
+            return rx - R * 0.38 - userOffX; // Inner duct facing nose
+          }
+        };
+
+        const getOriginY = () => ey + R * 0.42 + userOffY;
 
         a.tears.push({
           eye: eyeChoice,
-          phase: 'forming',
-          startX, startY,
-          x: startX, y: startY,
-          size: 1.2,
-          maxSize: 3.5 + Math.random() * 2.5,
+          phase: 'attached', // Anchored directly on lower inner eye surface
+          getOriginX,
+          getOriginY,
+          x: getOriginX(),
+          y: getOriginY(),
+          startX: getOriginX(),
+          startY: getOriginY(),
+          size: 0.5,
+          targetSize: (2.5 + Math.random() * 2.0) * baseScale,
           accumTime: 0,
           pathProgress: 0,
           wobble: Math.random() * Math.PI * 2,
@@ -429,7 +462,7 @@ export function GooglyEyes({
         });
       }
 
-      renderRealisticTears(ctx, a.tears, discomfort, tSet);
+      renderRealisticTears(ctx, a.tears, discomfort, tSet, R);
 
       animRef.current = requestAnimationFrame(render);
     }

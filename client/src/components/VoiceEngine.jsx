@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Headless Voice & Subtitle Engine supporting English & Malayalam Text-to-Speech (TTS)
+ * Headless Voice Engine for Text-to-Speech (TTS)
  */
 export function VoiceEngine({
   state,
@@ -10,14 +10,15 @@ export function VoiceEngine({
   speechEnabled = true,
   speechRate = 0.9,
   speechPitch = 1.0,
-  speechVolume = 1.0,
+  speechVolume = 70, // 0 to 100%
   selectedVoiceURI = '',
   dialogueCooldown = 6,
+  testVoiceTrigger = 0,
   onSubtitleChange,
 }) {
   const lastSpokenRef = useRef(0);
   const prevStateRef = useRef(state);
-  const currentUtteranceRef = useRef(null);
+  const testTriggerRef = useRef(testVoiceTrigger);
 
   /** Pick active enabled dialogue matching state */
   function getActiveDialogue(targetState) {
@@ -27,30 +28,36 @@ export function VoiceEngine({
     return available[Math.floor(Math.random() * available.length)];
   }
 
-  function speak(text, targetLang) {
+  function speakText(text, targetLang, isTest = false) {
     if (!text) return;
 
     if (onSubtitleChange) {
       onSubtitleChange({ text, isSpeaking: true, language: targetLang });
     }
 
-    if (!window.speechSynthesis || !speechEnabled) return;
+    if (!window.speechSynthesis || (!speechEnabled && !isTest)) return;
 
     const now = Date.now();
     const cooldownMs = dialogueCooldown * 1000;
-    if (now - lastSpokenRef.current < cooldownMs && lastSpokenRef.current !== 0) {
+    if (!isTest && now - lastSpokenRef.current < cooldownMs && lastSpokenRef.current !== 0) {
       return;
     }
 
-    // Cancel any previous speech to avoid overlapping audio
+    // 1. Cancel previous speech to prevent overlapping/queueing
     window.speechSynthesis.cancel();
 
+    // 2. Create ONE new utterance
     const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = speechRate;
-    utt.pitch = speechPitch;
-    utt.volume = speechVolume;
 
-    // Load available browser voices
+    // 3. Map Volume 0–100% → 0.0–1.0
+    const normVolume = Math.max(0, Math.min(1, (speechVolume ?? 70) / 100));
+    utt.volume = normVolume;
+
+    // 4. Apply Pitch & Rate
+    utt.rate = Math.max(0.5, Math.min(2.0, speechRate || 0.9));
+    utt.pitch = Math.max(0.5, Math.min(1.5, speechPitch || 1.0));
+
+    // 5. Apply Voice & Language
     const voices = window.speechSynthesis.getVoices() || [];
     let chosenVoice = null;
 
@@ -60,15 +67,10 @@ export function VoiceEngine({
 
     if (!chosenVoice) {
       if (targetLang === 'ml') {
-        // Look for Malayalam voice (ml-IN)
         chosenVoice = voices.find(
           (v) => v.lang.toLowerCase().includes('ml') || v.name.toLowerCase().includes('malayalam')
         );
-        if (!chosenVoice) {
-          console.warn('[VoiceEngine] ⚠️ Malayalam (ml-IN) TTS voice not available in browser. Text displayed as subtitle.');
-        }
       } else {
-        // Look for English voice (en-US, en-GB, etc.)
         chosenVoice = voices.find((v) => v.lang.toLowerCase().startsWith('en'));
       }
     }
@@ -91,12 +93,26 @@ export function VoiceEngine({
       }
     };
 
-    currentUtteranceRef.current = utt;
+    // 6. Speak
     window.speechSynthesis.speak(utt);
     lastSpokenRef.current = now;
   }
 
-  // Trigger dialogue speech ONCE on emotional state change
+  // Handle "Test Voice" trigger
+  useEffect(() => {
+    if (testVoiceTrigger === testTriggerRef.current || testVoiceTrigger === 0) return;
+    testTriggerRef.current = testVoiceTrigger;
+
+    const testText =
+      language === 'ml'
+        ? "ഹലോ! ഇത് വൈകാരിക സംഭാഷണ സംവിധാനത്തിന്റെ ഒരു പരീക്ഷണമാണ്."
+        : "Hello! This is a test of the emotional voice system.";
+
+    speakText(testText, language, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testVoiceTrigger]);
+
+  // Trigger dialogue speech ONCE on emotional state transition
   useEffect(() => {
     if (state === prevStateRef.current) return;
     prevStateRef.current = state;
@@ -106,21 +122,20 @@ export function VoiceEngine({
 
     const textToSpeak = language === 'ml' ? (dlg.malayalam || dlg.english) : (dlg.english || dlg.malayalam);
 
-    // Speak after brief delay so state transition settles
     const timer = setTimeout(() => {
-      speak(textToSpeak, language);
-    }, 500);
+      speakText(textToSpeak, language, false);
+    }, 400);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, language, dialogues, speechEnabled]);
 
-  // Cleanup speech synthesis on unmount
+  // Cleanup on unmount
   useEffect(() => () => {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
   }, []);
 
-  return null; // Headless component
+  return null;
 }

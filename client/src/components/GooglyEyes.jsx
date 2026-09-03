@@ -7,14 +7,16 @@ const BG = '#0d0618';
  * Visual configuration per emotional state.
  */
 const STATE_CONFIGS = {
-  friendly: { lidT: 0.05, lidB: 0.38, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
-  ignored: { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.20, lerpSpd: 0.05, dartEvery: 90 },
+  friendly:   { lidT: 0.05, lidB: 0.38, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
+  // ── Shy: eyes cast down, pupils averted, soft blush pink ──
+  shy:        { lidT: 0.35, lidB: 0.18, pupR: 0.36, hue: '#f9a8d4', wander: 0.10, lerpSpd: 0.04, dartEvery: 55 },
+  ignored:    { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.20, lerpSpd: 0.05, dartEvery: 90 },
   mild_annoyance: { lidT: 0.25, lidB: 0.05, pupR: 0.40, hue: '#f59e0b', wander: 0.28, lerpSpd: 0.05, dartEvery: 80 },
-  annoyed: { lidT: 0.40, lidB: 0.06, pupR: 0.38, hue: '#f97316', wander: 0.35, lerpSpd: 0.06, dartEvery: 65 },
-  offended: { lidT: 0.55, lidB: 0.06, pupR: 0.36, hue: '#ef4444', wander: 0.45, lerpSpd: 0.06, dartEvery: 50 },
-  petty: { lidT: 0.68, lidB: 0.06, pupR: 0.32, hue: '#a855f7', wander: 0.55, lerpSpd: 0.05, dartEvery: 100 },
-  over_it: { lidT: 0.82, lidB: 0.04, pupR: 0.28, hue: '#64748b', wander: 0.60, lerpSpd: 0.04, dartEvery: 120 },
-  uncomfortable: { lidT: 0.15, lidB: 0.10, pupR: 0.25, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 45 },
+  annoyed:    { lidT: 0.40, lidB: 0.06, pupR: 0.38, hue: '#f97316', wander: 0.35, lerpSpd: 0.06, dartEvery: 65 },
+  offended:   { lidT: 0.55, lidB: 0.06, pupR: 0.36, hue: '#ef4444', wander: 0.45, lerpSpd: 0.06, dartEvery: 50 },
+  petty:      { lidT: 0.68, lidB: 0.06, pupR: 0.32, hue: '#a855f7', wander: 0.55, lerpSpd: 0.05, dartEvery: 100 },
+  over_it:    { lidT: 0.82, lidB: 0.04, pupR: 0.28, hue: '#64748b', wander: 0.60, lerpSpd: 0.04, dartEvery: 120 },
+  uncomfortable:      { lidT: 0.15, lidB: 0.10, pupR: 0.25, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 45 },
   very_uncomfortable: { lidT: 0.30, lidB: 0.20, pupR: 0.22, hue: '#0284c7', wander: 0.40, lerpSpd: 0.09, dartEvery: 35 },
   peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.25, lerpSpd: 0.10, dartEvery: 30 },
 };
@@ -355,7 +357,12 @@ export function GooglyEyes({
       if (a.frame % cfg.dartEvery === 0) {
         const w_ = cfg.wander;
 
-        if (curState === 'petty' || curState === 'over_it') {
+        if (curState === 'shy') {
+          // Shy: pupils dart to lower-left or lower-right, avoiding user gaze
+          const side = Math.random() > 0.5 ? 1 : -1;
+          a.tx = side * (0.25 + Math.random() * 0.20);
+          a.ty = 0.28 + Math.random() * 0.12; // always looking downward
+        } else if (curState === 'petty' || curState === 'over_it') {
           a.tx = -w_ * 0.75;
           a.ty = -0.30;
         } else if (curState === 'uncomfortable' || curState === 'very_uncomfortable') {

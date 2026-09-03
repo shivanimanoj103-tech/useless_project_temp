@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 const ALL_STATES = [
   'friendly',
+  'shy',
   'ignored',
   'mild_annoyance',
   'annoyed',

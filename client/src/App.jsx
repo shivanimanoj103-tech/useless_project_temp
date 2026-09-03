@@ -12,7 +12,8 @@ import { defaultDialogues } from './data/voiceLines';
 // Comprehensive emotional state metadata
 const STATE_META = {
   friendly: { label: 'HAPPY TO SEE YOU', msg: "Yay! You're back! I love attention!", color: '#4ade80' },
-  ignored: { label: 'I See You', msg: "Hey. You came back. No big deal. (It's a big deal.)", color: '#5b86e5' },
+  shy:      { label: 'SHY 🌸', msg: "D-don't look at me that way… I mean it!", color: '#f9a8d4' },
+  ignored:  { label: 'I See You', msg: "Hey. You came back. No big deal. (It's a big deal.)", color: '#5b86e5' },
   mild_annoyance: { label: 'Mild Annoyance', msg: "Oh, is something else more interesting than me?", color: '#f59e0b' },
   annoyed: { label: 'Annoyed', msg: "Seriously? Still looking away? I am right here.", color: '#f97316' },
   offended: { label: 'Offended', msg: "I'm starting to take this personally.", color: '#ef4444' },
@@ -26,7 +27,8 @@ const STATE_META = {
 // Emotion-responsive background gradient color map
 const EMOTION_GRADIENTS = {
   friendly: { c1: '#10b981', c2: '#06b6d4' },
-  ignored: { c1: '#3b82f6', c2: '#0f172a' },
+  shy:      { c1: '#f9a8d4', c2: '#9d174d' },
+  ignored:  { c1: '#3b82f6', c2: '#0f172a' },
   mild_annoyance: { c1: '#f59e0b', c2: '#78350f' },
   annoyed: { c1: '#f97316', c2: '#b91c1c' },
   offended: { c1: '#ef4444', c2: '#581c87' },

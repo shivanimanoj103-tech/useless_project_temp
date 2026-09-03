@@ -69,9 +69,10 @@ export function useEyeState(isLookingAtScreen) {
   const pendingStateRef = useRef(null);
   const pendingTimeRef = useRef(0);
 
-  // Initial "Friendly" expression tracking
+  // Initial "Friendly" → "Shy" expression tracking
   const firstContactDoneRef = useRef(false);
   const friendlyTimerRef = useRef(0);
+  const shyTimerRef = useRef(0);
 
   // Peak Uncomfortable state machine tracking
   const peakPhaseRef = useRef('closed'); // 'closed' | 'peeking' | 'cooldown'
@@ -130,18 +131,31 @@ export function useEyeState(isLookingAtScreen) {
       const thresholdScale = thresholdRef.current / 5;
       const effectiveDelay = delayRef.current * thresholdScale;
 
-      // ── 1. Initial "Smiley / Friendly" Eye Contact Reaction ───────────────
-      if (looking && !firstContactDoneRef.current) {
+      // ── 1. Initial "Friendly" → "Shy" Eye Contact Reaction ──────────────
+      if (looking && !firstContactDoneRef.current && cur !== 'shy') {
         if (cur !== 'friendly') {
           doTransition('friendly');
         }
         friendlyTimerRef.current += delta;
         if (friendlyTimerRef.current >= 3.5) {
+          // Friendly greet done — slide into Shy mode
+          doTransition('shy');
+          shyTimerRef.current = 0;
+        }
+      } else if (cur === 'friendly') {
+        // If user looks away during initial friendly state, skip shy → mild annoyance
+        if (!looking) {
+          firstContactDoneRef.current = true;
+          doTransition('mild_annoyance');
+        }
+      } else if (cur === 'shy') {
+        // Shy phase: eyes look away for 4 seconds then settle into ignored
+        shyTimerRef.current += delta;
+        if (shyTimerRef.current >= 4.0) {
           firstContactDoneRef.current = true;
           doTransition('ignored');
         }
-      } else if (cur === 'friendly') {
-        // If user looks away during initial friendly state, end friendly state
+        // If user looks away while we're shy, end shy early → mild annoyance
         if (!looking) {
           firstContactDoneRef.current = true;
           doTransition('mild_annoyance');
@@ -255,7 +269,7 @@ export function useEyeState(isLookingAtScreen) {
       const intensityScale = discIntRef.current / 5;
 
       switch (stateRef.current) {
-        case 'friendly': case 'ignored': targetDiscomfort = 0.0; break;
+        case 'friendly': case 'shy': case 'ignored': targetDiscomfort = 0.0; break;
         case 'mild_annoyance': targetDiscomfort = 0.1 * intensityScale; break;
         case 'annoyed': targetDiscomfort = 0.35 * intensityScale; break;
         case 'offended': targetDiscomfort = 0.55 * intensityScale; break;

@@ -15,6 +15,32 @@ export const defaultDialogues = [
     enabled: true,
     autoRead: true,
   },
+
+  // ── Shy ──────────────────────────────────────────────────────────────
+  {
+    id: 'd-shy-1',
+    state: 'shy',
+    english: "D-don't look at me that way… it's embarrassing.",
+    malayalam: "ഇങ്ങനെ നോക്കരുതേ... ലജ്ജ തോന്നുന്നു.",
+    enabled: true,
+    autoRead: true,
+  },
+  {
+    id: 'd-shy-2',
+    state: 'shy',
+    english: "Why are you staring…? I'm not ready for this!",
+    malayalam: "എന്തിനാ ഇങ്ങനെ നോക്കുന്നത്...? ഞാൻ തയ്യാറല്ല!",
+    enabled: true,
+    autoRead: true,
+  },
+  {
+    id: 'd-shy-3',
+    state: 'shy',
+    english: "Please… look somewhere else for a second.",
+    malayalam: "ദയവായി… ഒരു നിമിഷം മറ്റെങ്ങോ നോക്ക്.",
+    enabled: true,
+    autoRead: true,
+  },
   {
     id: 'd-ignored-1',
     state: 'ignored',
@@ -23,6 +49,7 @@ export const defaultDialogues = [
     enabled: true,
     autoRead: true,
   },
+
   {
     id: 'd-mild-1',
     state: 'mild_annoyance',

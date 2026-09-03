@@ -76,21 +76,26 @@ body {
   z-index: 0;
 }
 
-/* Tiny webcam PiP */
+/* Picture-in-Picture Webcam Feed */
 .webcam-pip {
   position: fixed;
-  bottom: 14px;
-  right: 14px;
-  width: 90px;
-  height: 68px;
-  border-radius: var(--radius-sm);
+  bottom: 20px;
+  right: 20px;
+  width: 180px;
+  height: 135px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   object-fit: cover;
-  opacity: 0.22;
+  opacity: 0.75;
   z-index: 100;
-  transition: opacity 0.3s;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 14px var(--glow-color);
+  transition: all 0.3s ease;
+  transform-origin: bottom right;
 }
-.webcam-pip:hover { opacity: 0.6; }
+.webcam-pip:hover {
+  opacity: 1.0;
+  transform: scale(1.08);
+}
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
 .app-header {

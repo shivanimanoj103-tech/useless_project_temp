@@ -7,8 +7,7 @@ const BG = '#0d0618';
  * Visual configuration per emotional state.
  */
 const STATE_CONFIGS = {
-  friendly:           { lidT: 0.05, lidB: 0.35, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
-  shy:                { lidT: 0.35, lidB: 0.18, pupR: 0.36, hue: '#f9a8d4', wander: 0.10, lerpSpd: 0.04, dartEvery: 55 },
+  sad:                { lidT: 0.38, lidB: 0.22, pupR: 0.38, hue: '#6366f1', wander: 0.16, lerpSpd: 0.05, dartEvery: 85 },
   uncomfortable:      { lidT: 0.20, lidB: 0.18, pupR: 0.28, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 40 },
   very_uncomfortable: { lidT: 0.35, lidB: 0.25, pupR: 0.22, hue: '#0284c7', wander: 0.45, lerpSpd: 0.10, dartEvery: 28 },
   peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.15, lerpSpd: 0.10, dartEvery: 40 },
@@ -360,11 +359,11 @@ export function GooglyEyes({
       if (a.frame % cfg.dartEvery === 0) {
         const w_ = cfg.wander;
 
-        if (curState === 'shy') {
-          // Shy: pupils dart to lower-left or lower-right, avoiding user gaze
+        if (curState === 'sad') {
+          // Sad eyes: pupils gaze sorrowfully slightly downward and averted
           const side = Math.random() > 0.5 ? 1 : -1;
-          a.tx = side * (0.25 + Math.random() * 0.20);
-          a.ty = 0.28 + Math.random() * 0.12; // always looking downward
+          a.tx = side * (0.08 + Math.random() * 0.10);
+          a.ty = 0.22 + Math.random() * 0.10; // drooping downward sadly
         } else if (curState === 'petty' || curState === 'over_it') {
           a.tx = -w_ * 0.75;
           a.ty = -0.30;
@@ -372,9 +371,6 @@ export function GooglyEyes({
           const side = Math.random() > 0.5 ? 1 : -1;
           a.tx = side * (0.15 + Math.random() * 0.25);
           a.ty = (Math.random() - 0.5) * 0.20;
-        } else if (curState === 'friendly') {
-          a.tx = (Math.random() - 0.5) * 0.10;
-          a.ty = -0.12;
         } else {
           const ang = Math.random() * Math.PI * 2;
           const dist = Math.random() * w_ * 0.65;
@@ -433,7 +429,7 @@ export function GooglyEyes({
       }
 
       const discomfort = sneak.discomfortLevel || 0;
-      const wetness = (tSet.eyeWetness || 0.6) * discomfort;
+      const wetness = curState === 'sad' ? 0.45 : (tSet.eyeWetness || 0.6) * discomfort;
 
       // Render Left & Right Eyes
       drawEye(ctx, lx, ey, R, { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: irisHue, px: a.lpx, py: a.lpy, wetness });
@@ -444,7 +440,7 @@ export function GooglyEyes({
       // Tears ONLY form when a command with tear comes to read or as a display!
       if (curState === 'peak_uncomfortable') {
         a.tears = []; // Clear active tears immediately
-      } else if (hasTearRef.current && (curState === 'very_uncomfortable' || curState === 'uncomfortable')) {
+      } else if (hasTearRef.current && (curState === 'very_uncomfortable' || curState === 'uncomfortable' || curState === 'sad')) {
         const intensity = tSet.tearIntensity || 0.6;
         const formationRate = (tSet.tearFormationSpeed || 1.0) * 0.06;
         const effectiveDiscomfort = Math.max(0.4, discomfort);

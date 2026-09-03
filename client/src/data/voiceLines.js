@@ -1,43 +1,26 @@
 export const defaultDialogues = [
+  // ── Sad & Scolding (when returning to look after looking away) ───────
   {
-    id: 'd-friendly-1',
-    state: 'friendly',
-    english: "Yay! You're looking at me!",
-    malayalam: "നിന്നെ കാണാൻ സന്തോഷം!",
+    id: 'd-sad-1',
+    state: 'sad',
+    english: "Why are you looking at me now?! You were just ignoring me!",
+    malayalam: "ഇപ്പോൾ എന്നെ എന്തിനാണ് നോക്കുന്നത്?! നീ എന്നെ അവഗണിക്കുകയായിരുന്നല്ലോ!",
     enabled: true,
     autoRead: true,
   },
   {
-    id: 'd-friendly-2',
-    state: 'friendly',
-    english: "Hello friend! Good to see you!",
-    malayalam: "ഹലോ കൂട്ടുകാരാ! കണ്ടതിൽ സന്തോഷം!",
-    enabled: true,
-    autoRead: true,
-  },
-
-  // ── Shy ──────────────────────────────────────────────────────────────
-  {
-    id: 'd-shy-1',
-    state: 'shy',
-    english: "D-don't look at me that way… it's embarrassing.",
-    malayalam: "ഇങ്ങനെ നോക്കരുതേ... ലജ്ജ തോന്നുന്നു.",
+    id: 'd-sad-2',
+    state: 'sad',
+    english: "Now you look at me? Where were you looking before?!",
+    malayalam: "ഇപ്പോഴാണോ എന്നെ നോക്കാൻ തോന്നിയത്? മുൻപ് എങ്ങോട്ടാ നോക്കിയിരുന്നത്?!",
     enabled: true,
     autoRead: true,
   },
   {
-    id: 'd-shy-2',
-    state: 'shy',
-    english: "Why are you staring…? I'm not ready for this!",
-    malayalam: "എന്തിനാ ഇങ്ങനെ നോക്കുന്നത്...? ഞാൻ തയ്യാറല്ല!",
-    enabled: true,
-    autoRead: true,
-  },
-  {
-    id: 'd-shy-3',
-    state: 'shy',
-    english: "Please… look somewhere else for a second.",
-    malayalam: "ദയവായി… ഒരു നിമിഷം മറ്റെങ്ങോ നോക്ക്.",
+    id: 'd-sad-3',
+    state: 'sad',
+    english: "Why are you staring at me like that? It hurts when you look away!",
+    malayalam: "എന്തിനാ എന്നെ ഇങ്ങനെ നോക്കുന്നത്? നീ നോക്കാതിരുന്നപ്പോൾ എനിക്ക് സങ്കടമായി!",
     enabled: true,
     autoRead: true,
   },
@@ -117,8 +100,7 @@ export const defaultDialogues = [
 ];
 
 export const voiceLines = {
-  friendly: defaultDialogues.filter(d => d.state === 'friendly').map(d => d.english),
-  shy: defaultDialogues.filter(d => d.state === 'shy').map(d => d.english),
+  sad: defaultDialogues.filter(d => d.state === 'sad').map(d => d.english),
   ignored: defaultDialogues.filter(d => d.state === 'ignored').map(d => d.english),
   mild_annoyance: defaultDialogues.filter(d => d.state === 'mild_annoyance').map(d => d.english),
   annoyed: defaultDialogues.filter(d => d.state === 'annoyed').map(d => d.english),

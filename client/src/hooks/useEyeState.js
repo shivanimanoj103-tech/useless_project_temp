@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
- * Branch A: User is LOOKING at the eyes
- * Progression: FRIENDLY → SHY → UNCOMFORTABLE → VERY UNCOMFORTABLE → PEAK UNCOMFORTABLE
+ * Branch A: User is LOOKING at the eyes (returning to look after looking away)
+ * Progression: SAD (scolding) → UNCOMFORTABLE → VERY UNCOMFORTABLE → PEAK UNCOMFORTABLE (every 4 seconds)
  */
 const BRANCH_A_TIMINGS = [
-  { state: 'friendly',           time: 0 },
-  { state: 'shy',                time: 4.0 },
-  { state: 'uncomfortable',      time: 8.0 },
-  { state: 'very_uncomfortable',  time: 12.0 },
-  { state: 'peak_uncomfortable',  time: 16.0 },
+  { state: 'sad',                 time: 0 },
+  { state: 'uncomfortable',      time: 4.0 },
+  { state: 'very_uncomfortable',  time: 8.0 },
+  { state: 'peak_uncomfortable',  time: 12.0 },
 ];
 
 /**
@@ -158,10 +157,10 @@ export function useEyeState(isLookingAtScreen) {
           if (pendingBranchTimeRef.current >= branchDebounce) {
             // GAZE DIRECTION CHANGED! Switch branch immediately and reset timers.
             if (targetBranch === 'A') {
-              // LOOKING AT SCREEN → BRANCH A starts at FRIENDLY immediately
+              // LOOKING AT SCREEN → Returning to look after looking away shows SAD eyes with scolding!
               contactRef.current = 0;
               awayRef.current = 0;
-              doTransition('friendly');
+              doTransition('sad');
             } else {
               // LOOKING AWAY → BRANCH B starts at IGNORED immediately
               awayRef.current = 0;
@@ -187,17 +186,15 @@ export function useEyeState(isLookingAtScreen) {
           contactRef.current += delta;
           const t = contactRef.current;
 
-          let candidateState = 'friendly';
-          if (t >= 17.0 * thresholdScale) {
+          let candidateState = 'sad';
+          if (t >= 12.0 * thresholdScale) {
             candidateState = 'peak_uncomfortable';
-          } else if (t >= 12.0 * thresholdScale) {
+          } else if (t >= 8.0 * thresholdScale) {
             candidateState = 'very_uncomfortable';
-          } else if (t >= 7.0 * thresholdScale) {
+          } else if (t >= 4.0 * thresholdScale) {
             candidateState = 'uncomfortable';
-          } else if (t >= 3.5 * thresholdScale) {
-            candidateState = 'shy';
           } else {
-            candidateState = 'friendly';
+            candidateState = 'sad';
           }
 
           if (candidateState !== cur) {
@@ -215,13 +212,13 @@ export function useEyeState(isLookingAtScreen) {
           const t = awayRef.current;
 
           let candidateState = 'ignored';
-          if (t >= 45.0 * thresholdScale) {
+          if (t >= 20.0 * thresholdScale) {
             candidateState = 'over_it';
-          } else if (t >= 28.0 * thresholdScale) {
-            candidateState = 'petty';
           } else if (t >= 16.0 * thresholdScale) {
+            candidateState = 'petty';
+          } else if (t >= 12.0 * thresholdScale) {
             candidateState = 'offended';
-          } else if (t >= 9.0 * thresholdScale) {
+          } else if (t >= 8.0 * thresholdScale) {
             candidateState = 'annoyed';
           } else if (t >= 4.0 * thresholdScale) {
             candidateState = 'mild_annoyance';
@@ -263,9 +260,13 @@ export function useEyeState(isLookingAtScreen) {
       const intensityScale = discIntRef.current / 5;
 
       switch (stateRef.current) {
+        case 'sad':
+          // Mild glossy moisture sheen for hurt sad eyes
+          targetDiscomfort = 0.25 * intensityScale;
+          break;
         case 'uncomfortable':
           // Subtle eye moisture sheen, do NOT start crying yet
-          targetDiscomfort = 0.30 * intensityScale;
+          targetDiscomfort = 0.40 * intensityScale;
           break;
         case 'very_uncomfortable':
           // High moisture + tears begin forming and falling

@@ -10,8 +10,7 @@ import { defaultDialogues } from './data/voiceLines';
 
 // Comprehensive emotional state metadata
 const STATE_META = {
-  friendly:           { label: 'FRIENDLY 😊', msg: "Yay! You're looking at me! Welcome!", color: '#4ade80' },
-  shy:                { label: 'SHY 🌸', msg: "D-don't look at me that way… it's embarrassing.", color: '#f9a8d4' },
+  sad:                { label: 'SAD & SCOLDING 🥺', msg: "Why are you looking at me now?! After ignoring me?!", color: '#6366f1' },
   uncomfortable:      { label: 'UNCOMFORTABLE 😬', msg: "You're making me uncomfortable. Too much eye contact...", color: '#06b6d4' },
   very_uncomfortable: { label: 'VERY UNCOMFORTABLE 😰', msg: "WHY ARE YOU STILL STARING?! My eyes are tearing up!", color: '#0284c7' },
   peak_uncomfortable: { label: 'PEAK UNCOMFORTABLE 🙈', msg: "PLEASE STOP LOOKING! I have to close my eyes...", color: '#38bdf8' },
@@ -25,8 +24,7 @@ const STATE_META = {
 
 // Emotion-responsive background gradient color map
 const EMOTION_GRADIENTS = {
-  friendly: { c1: '#10b981', c2: '#06b6d4' },
-  shy:      { c1: '#f9a8d4', c2: '#9d174d' },
+  sad:      { c1: '#4338ca', c2: '#1e1b4b' },
   ignored:  { c1: '#3b82f6', c2: '#0f172a' },
   mild_annoyance: { c1: '#f59e0b', c2: '#78350f' },
   annoyed: { c1: '#f97316', c2: '#b91c1c' },
@@ -71,7 +69,14 @@ export default function App() {
   const [dialogues, setDialogues] = useState(() => {
     try {
       const raw = localStorage.getItem('needy_dialogues');
-      return raw ? JSON.parse(raw) : defaultDialogues;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.some((d) => d.state === 'friendly' || d.state === 'shy')) {
+          return defaultDialogues;
+        }
+        return parsed;
+      }
+      return defaultDialogues;
     } catch (_) { return defaultDialogues; }
   });
 

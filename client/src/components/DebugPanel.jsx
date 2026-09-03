@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const ALL_STATES_BRANCH_A = [
-  'friendly',
-  'shy',
+  'sad',
   'uncomfortable',
   'very_uncomfortable',
   'peak_uncomfortable',
@@ -410,7 +409,7 @@ export function DebugPanel({
 
         <Slider label={`State Threshold: ${stateThreshold}`} min={1} max={10} step={1}
           value={stateThreshold} onChange={setStateThreshold} />
-        <Slider label={`Transition Delay: ${transitionDelay}s`} min={0.5} max={5.0} step={0.5}
+        <Slider label={`⚡ Response Speed / Gaze Delay: ${transitionDelay.toFixed(1)}s`} min={0.1} max={3.0} step={0.1}
           value={transitionDelay} onChange={setTransitionDelay} />
         <Slider label={`Eye Movement Speed: ${eyeMovementSpeed.toFixed(2)}`} min={0.02} max={0.20} step={0.01}
           value={eyeMovementSpeed} onChange={setEyeMovementSpeed} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const ALL_STATES = [
-  'friendly',
+  'sad',
   'ignored',
   'mild_annoyance',
   'annoyed',
@@ -14,7 +14,7 @@ const ALL_STATES = [
 ];
 
 export function DialogueModal({ isOpen, onClose, onSave, editingDialogue }) {
-  const [state, setState] = useState(editingDialogue?.state || 'friendly');
+  const [state, setState] = useState(editingDialogue?.state || 'sad');
   const [english, setEnglish] = useState(editingDialogue?.english || '');
   const [malayalam, setMalayalam] = useState(editingDialogue?.malayalam || '');
   const [enabled, setEnabled] = useState(editingDialogue?.enabled ?? true);

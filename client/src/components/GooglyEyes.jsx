@@ -36,8 +36,26 @@ function darken(hex, amt) {
   return `rgb(${Math.max(0, r - amt)},${Math.max(0, g - amt)},${Math.max(0, b - amt)})`;
 }
 
-// ── Draw one eye (Sclera, Iris, Pupil, specular highlights, Eyelid masks) ──
-function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
+// ── Draw lower eyelid moisture gloss sheen ─────────────────────────────────
+function drawEyeMoisture(ctx, cx, cy, R, wetnessLevel) {
+  if (wetnessLevel <= 0.05) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.85, wetnessLevel * 0.7);
+
+  // Gloss arc along bottom eyelid contour
+  ctx.beginPath();
+  ctx.arc(cx, cy + R * 0.3, R * 0.72, 0.1 * Math.PI, 0.9 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.lineWidth = Math.max(1.5, R * 0.04 * wetnessLevel);
+  ctx.shadowColor = 'rgba(186, 230, 253, 0.8)';
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ── Draw one eye ───────────────────────────────────────────────────────────
+function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink, wetness }) {
   ctx.save();
 
   // Drop shadow
@@ -62,7 +80,7 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  // Synchronized Pupil & Iris position (clamped safely within eye bounds)
+  // Pupil & Iris position
   const epx = cx + px * R * 0.44;
   const epy = cy + py * R * 0.44;
   const iR = R * pupR * 1.55; // Iris radius
@@ -98,7 +116,7 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.fillStyle = pg;
   ctx.fill();
 
-  // Primary & secondary specular reflections
+  // Specular reflections
   ctx.beginPath();
   ctx.arc(epx - pR * 0.3, epy - pR * 0.35, pR * 0.28, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255,255,255,0.96)';
@@ -109,7 +127,7 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.fill();
 
-  // ── Eyelid Masks (Top and Bottom Eyelids) ──
+  // Eyelid Masks
   const topLid = Math.min(1.0, lidT + Math.max(0, blink));
   if (topLid > 0.003) {
     ctx.fillStyle = BG;
@@ -121,6 +139,9 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   }
 
   ctx.restore(); // end clip
+
+  // Eye Moisture Sheen
+  drawEyeMoisture(ctx, cx, cy, R, wetness);
 
   // Outer googly rim
   ctx.beginPath();
@@ -146,49 +167,91 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.restore();
 }
 
-// ── Render Tear Droplets when Annoyed / Uncomfortable ─────────────────────
-function renderTears(ctx, tears, discomfortLevel) {
+// ── Render Realistic Liquid Tear Droplets ──────────────────────────────────
+function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings) {
   if (!tears || tears.length === 0) return;
+
+  const flowSpd = tearSettings.tearFlowSpeed || 1.0;
 
   for (let i = tears.length - 1; i >= 0; i--) {
     const t = tears[i];
-    t.y += t.vy;
-    t.vy += 0.12; // gravity
-    t.alpha -= 0.015;
-    t.size += 0.03;
 
-    if (t.alpha <= 0) {
+    if (t.phase === 'forming') {
+      // Stage A: Accumulating tear at eye corner
+      t.size = lerp(t.size, t.maxSize, 0.05 * (tearSettings.tearFormationSpeed || 1.0));
+      t.accumTime += 0.016;
+      t.alpha = Math.min(0.9, t.accumTime * 2);
+
+      if (t.size >= t.maxSize * 0.9) {
+        t.phase = 'flowing';
+      }
+    } else if (t.phase === 'flowing') {
+      // Stage B: Flowing down following curved facial path
+      t.pathProgress += 0.008 * flowSpd;
+      t.wobble += 0.08;
+      const wobbleX = Math.sin(t.wobble) * 1.5;
+
+      t.x = t.startX + wobbleX;
+      t.y = t.startY + t.pathProgress * 120;
+      t.elongation = 1.0 + t.pathProgress * 0.8;
+
+      // Stage D: Detach into falling drop
+      if (t.pathProgress >= 0.7 && Math.random() < (tearSettings.tearDropProb || 0.5) * 0.05) {
+        t.phase = 'falling';
+        t.vy = 2.0;
+      }
+    } else if (t.phase === 'falling') {
+      // Stage D: Free falling detached drop
+      t.y += t.vy;
+      t.vy += 0.22; // gravity
+      t.alpha -= 0.02;
+      t.elongation = lerp(t.elongation, 1.4, 0.1);
+    }
+
+    if (t.y > ctx.canvas.height || t.alpha <= 0) {
       tears.splice(i, 1);
       continue;
     }
 
+    // Render realistic fluid tear graphics
     ctx.save();
     ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, discomfortLevel * 1.2));
 
-    // Tear drop path (teardrop shape)
-    ctx.beginPath();
-    ctx.moveTo(t.x, t.y - t.size * 1.5);
-    ctx.bezierCurveTo(
-      t.x + t.size * 1.2, t.y,
-      t.x + t.size * 1.2, t.y + t.size * 1.5,
-      t.x, t.y + t.size * 1.5
-    );
-    ctx.bezierCurveTo(
-      t.x - t.size * 1.2, t.y + t.size * 1.5,
-      t.x - t.size * 1.2, t.y,
-      t.x, t.y - t.size * 1.5
-    );
+    const rx = t.size;
+    const ry = t.size * (t.elongation || 1.0);
 
-    const tg = ctx.createLinearGradient(t.x, t.y - t.size, t.x, t.y + t.size);
-    tg.addColorStop(0, 'rgba(186, 230, 253, 0.9)');
-    tg.addColorStop(1, 'rgba(14, 165, 233, 0.75)');
+    // Subtle drop shadow behind liquid drop
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+
+    // Fluid Teardrop Body (Bezier shape)
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y - ry);
+    ctx.bezierCurveTo(t.x + rx * 1.3, t.y, t.x + rx * 1.2, t.y + ry, t.x, t.y + ry);
+    ctx.bezierCurveTo(t.x - rx * 1.2, t.y + ry, t.x - rx * 1.3, t.y, t.x, t.y - ry);
+
+    // Glassy transparent gradient (clear fluid with light refraction)
+    const tg = ctx.createLinearGradient(t.x - rx, t.y - ry, t.x + rx, t.y + ry);
+    tg.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
+    tg.addColorStop(0.3, 'rgba(224, 242, 254, 0.35)');
+    tg.addColorStop(0.8, 'rgba(186, 230, 253, 0.45)');
+    tg.addColorStop(1, 'rgba(255, 255, 255, 0.8)');
+
     ctx.fillStyle = tg;
     ctx.fill();
 
-    // Tear specular highlight
+    ctx.shadowColor = 'transparent';
+
+    // Surface tension meniscus outline
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.stroke();
+
+    // Glossy Specular Highlight (3D Curved sheen)
     ctx.beginPath();
-    ctx.arc(t.x - t.size * 0.3, t.y - t.size * 0.3, t.size * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.ellipse(t.x - rx * 0.35, t.y - ry * 0.35, rx * 0.3, ry * 0.25, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.fill();
 
     ctx.restore();
@@ -196,29 +259,33 @@ function renderTears(ctx, tears, discomfortLevel) {
 }
 
 // ── GooglyEyes Component ────────────────────────────────────────────────────
-export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
+export function GooglyEyes({
+  state,
+  eyeMovementSpeed = 0.08,
+  sneakPeekInfo,
+  tearSettings = { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 }
+}) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
 
   const stateRef = useRef(state);
   const speedRef = useRef(eyeMovementSpeed);
   const sneakRef = useRef(sneakPeekInfo);
+  const tearSetRef = useRef(tearSettings);
 
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => { speedRef.current = eyeMovementSpeed; }, [eyeMovementSpeed]);
   useEffect(() => { sneakRef.current = sneakPeekInfo; }, [sneakPeekInfo]);
+  useEffect(() => { tearSetRef.current = tearSettings; }, [tearSettings]);
 
-  // Animation state ref (persists without React re-renders)
   const A = useRef({
-    // Left & Right pupil position / velocity
     lpx: 0, lpy: 0, lvx: 0, lvy: 0,
     rpx: 0, rpy: 0, rvx: 0, rvy: 0,
-    // Synchronized target gaze direction
     tx: 0, ty: 0,
     lidT: 0.08, lidB: 0.04, pupR: 0.42,
     blink: 0, blinking: false, blinkTimer: 0, nextBlink: 200,
     frame: 0,
-    tears: [], // Tear particle list
+    tears: [],
   });
 
   useEffect(() => {
@@ -239,6 +306,7 @@ export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
       const curState = stateRef.current;
       const cfg = STATE_CONFIGS[curState] || STATE_CONFIGS.ignored;
       const sneak = sneakRef.current || {};
+      const tSet = tearSetRef.current || {};
       const spdMultiplier = speedRef.current || 0.08;
 
       const w = canvas.width;
@@ -257,40 +325,36 @@ export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
       a.lidB = lerp(a.lidB, cfg.lidB, cfg.lerpSpd);
       a.pupR = lerp(a.pupR, cfg.pupR, cfg.lerpSpd);
 
-      // ── 1. Synchronized Natural Pupil Movement ───────────────────────────
+      // ── Synchronized Natural Pupil Movement ───────────────────────────
       a.frame++;
       if (a.frame % cfg.dartEvery === 0) {
         const w_ = cfg.wander;
 
         if (curState === 'petty' || curState === 'over_it') {
-          // Dramatic side-glance (synchronized)
           a.tx = -w_ * 0.75;
           a.ty = -0.30;
         } else if (curState === 'uncomfortable' || curState === 'very_uncomfortable') {
-          // Subtle look away (controlled range, no wild pupil roll)
           const side = Math.random() > 0.5 ? 1 : -1;
           a.tx = side * (0.15 + Math.random() * 0.25);
           a.ty = (Math.random() - 0.5) * 0.20;
         } else if (curState === 'friendly') {
-          // Happy centered look with subtle upward tilt
           a.tx = (Math.random() - 0.5) * 0.10;
           a.ty = -0.12;
         } else {
-          // Normal synchronized gaze wander
           const ang = Math.random() * Math.PI * 2;
-          const dist = Math.random() * w_ * 0.65; // Clamped for natural look
+          const dist = Math.random() * w_ * 0.65;
           a.tx = Math.cos(ang) * dist;
           a.ty = Math.sin(ang) * dist * 0.7;
         }
       }
 
-      // Apply subtle micro-jitter so pupils stay strictly synchronized without looking rigid
+      // Synchronized micro-jitter
       const ltx = a.tx + (Math.random() - 0.5) * 0.02;
       const lty = a.ty + (Math.random() - 0.5) * 0.02;
       const rtx = a.tx + (Math.random() - 0.5) * 0.02;
       const rty = a.ty + (Math.random() - 0.5) * 0.02;
 
-      // Spring physics interpolation (controlled by eyeMovementSpeed setting)
+      // Spring physics interpolation
       const sp = spdMultiplier, dp = 0.78;
       a.lvx += (ltx - a.lpx) * sp; a.lvy += (lty - a.lpy) * sp;
       a.lvx *= dp; a.lvy *= dp;
@@ -300,7 +364,7 @@ export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
       a.rvx *= dp; a.rvy *= dp;
       a.rpx += a.rvx; a.rpy += a.rvy;
 
-      // ── 2. Blinking Logic ────────────────────────────────────────────────
+      // Blinking
       if (curState !== 'peak_uncomfortable') {
         a.blinkTimer++;
         if (!a.blinking && a.blinkTimer >= a.nextBlink) {
@@ -316,50 +380,56 @@ export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
         a.blink = 0;
       }
 
-      // ── 3. Eyelid Easing & One-Eye Sneak Peek Logic ──────────────────────
+      // Eyelids & Sneak Peek
       let leftLidT = a.lidT, rightLidT = a.lidT;
       let leftLidB = a.lidB, rightLidB = a.lidB;
 
       if (curState === 'peak_uncomfortable') {
         if (sneak.eye === 'left') {
-          // Left eye peeks! Right eye stays closed!
           leftLidT = 0.35; leftLidB = 0.15;
           rightLidT = 1.0; rightLidB = 1.0;
         } else if (sneak.eye === 'right') {
-          // Right eye peeks! Left eye stays closed!
           leftLidT = 1.0; leftLidB = 1.0;
           rightLidT = 0.35; rightLidB = 0.15;
         } else {
-          // Both eyes closed
           leftLidT = 1.0; leftLidB = 1.0;
           rightLidT = 1.0; rightLidB = 1.0;
         }
       }
 
-      // Render Left & Right Eyes
-      const baseLeft = { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue };
-      const baseRight = { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue };
-
-      drawEye(ctx, lx, ey, R, { ...baseLeft, px: a.lpx, py: a.lpy });
-      drawEye(ctx, rx, ey, R, { ...baseRight, px: a.rpx, py: a.rpy });
-
-      // ── 4. Tear Generation & Rendering ──────────────────────────────────
       const discomfort = sneak.discomfortLevel || 0;
-      if (discomfort > 0.25 && a.frame % Math.max(8, Math.floor(40 / (discomfort * 2))) === 0) {
-        // Spawn tear droplet from left or right eye socket
+      const wetness = (tSet.eyeWetness || 0.6) * discomfort;
+
+      // Render Left & Right Eyes
+      drawEye(ctx, lx, ey, R, { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.lpx, py: a.lpy, wetness });
+      drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.rpx, py: a.rpy, wetness });
+
+      // ── Realistic Tear Formation & Flow ────────────────────────────────
+      const intensity = tSet.tearIntensity || 0.6;
+      if (discomfort > 0.15 && Math.random() < 0.08 * discomfort * intensity) {
         const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
-        const tearX = (eyeChoice === 'left' ? lx : rx) + (Math.random() - 0.5) * R * 0.8;
-        const tearY = ey + R * 0.75;
+        const eyeX = eyeChoice === 'left' ? lx : rx;
+        // Corner of eye start
+        const startX = eyeX + (Math.random() > 0.5 ? R * 0.4 : -R * 0.4);
+        const startY = ey + R * 0.65;
+
         a.tears.push({
-          x: tearX,
-          y: tearY,
-          vy: 0.8 + Math.random() * 0.6,
-          size: 4 + Math.random() * 3,
-          alpha: 0.9,
+          eye: eyeChoice,
+          phase: 'forming',
+          startX, startY,
+          x: startX, y: startY,
+          size: 1.2,
+          maxSize: 3.5 + Math.random() * 2.5,
+          accumTime: 0,
+          pathProgress: 0,
+          wobble: Math.random() * Math.PI * 2,
+          alpha: 0.1,
+          elongation: 1.0,
+          vy: 0,
         });
       }
 
-      renderTears(ctx, a.tears, discomfort);
+      renderRealisticTears(ctx, a.tears, discomfort, tSet);
 
       animRef.current = requestAnimationFrame(render);
     }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWebcam } from './hooks/useWebcam';
 import { useGaze } from './hooks/useGaze';
 import { useEyeState } from './hooks/useEyeState';
@@ -6,8 +6,10 @@ import { GooglyEyes } from './components/GooglyEyes';
 import { VoiceEngine } from './components/VoiceEngine';
 import { DebugPanel } from './components/DebugPanel';
 import { Leaderboard } from './components/Leaderboard';
+import { DialogueModal } from './components/DialogueModal';
+import { defaultDialogues } from './data/voiceLines';
 
-// Comprehensive emotional state metadata (Labels, messages, and color themes)
+// Comprehensive emotional state metadata
 const STATE_META = {
   friendly: { label: 'HAPPY TO SEE YOU', msg: "Yay! You're back! I love attention!", color: '#4ade80' },
   ignored: { label: 'I See You', msg: "Hey. You came back. No big deal. (It's a big deal.)", color: '#5b86e5' },
@@ -21,6 +23,20 @@ const STATE_META = {
   peak_uncomfortable: { label: 'PEAK UNCOMFORTABLE 🙈', msg: "EYES CLOSED! Peeking with one eye... PLEASE STOP STARING!", color: '#38bdf8' },
 };
 
+// Emotion-responsive background gradient color map
+const EMOTION_GRADIENTS = {
+  friendly: { c1: '#10b981', c2: '#06b6d4' },
+  ignored: { c1: '#3b82f6', c2: '#0f172a' },
+  mild_annoyance: { c1: '#f59e0b', c2: '#78350f' },
+  annoyed: { c1: '#f97316', c2: '#b91c1c' },
+  offended: { c1: '#ef4444', c2: '#581c87' },
+  petty: { c1: '#a855f7', c2: '#be185d' },
+  over_it: { c1: '#4c1d95', c2: '#1e293b' },
+  uncomfortable: { c1: '#f43f5e', c2: '#4c1d95' },
+  very_uncomfortable: { c1: '#c026d3', c2: '#991b1b' },
+  peak_uncomfortable: { c1: '#7f1d1d', c2: '#090514' },
+};
+
 export default function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -28,6 +44,56 @@ export default function App() {
   const [sessionSaved, setSessionSaved] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // ── Persistent Settings (LocalStorage) ───────────────────────────────────
+  const [dialogues, setDialogues] = useState(() => {
+    try {
+      const raw = localStorage.getItem('needy_dialogues');
+      return raw ? JSON.parse(raw) : defaultDialogues;
+    } catch (_) { return defaultDialogues; }
+  });
+
+  const [tearSettings, setTearSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem('needy_tear_settings');
+      return raw ? JSON.parse(raw) : { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 };
+    } catch (_) { return { tearIntensity: 0.6, tearFormationSpeed: 1.0, tearFlowSpeed: 1.0, tearDropProb: 0.5, eyeWetness: 0.6 }; }
+  });
+
+  const [bgSettings, setBgSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem('needy_bg_settings');
+      return raw ? JSON.parse(raw) : { bgGradientEnabled: true, bgGradientIntensity: 0.65, bgTransitionSpeed: 1.0 };
+    } catch (_) { return { bgGradientEnabled: true, bgGradientIntensity: 0.65, bgTransitionSpeed: 1.0 }; }
+  });
+
+  const [blurSettings, setBlurSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem('needy_blur_settings');
+      return raw ? JSON.parse(raw) : { blurIntensity: 0.5, blurSize: 250, blurOpacity: 0.6 };
+    } catch (_) { return { blurIntensity: 0.5, blurSize: 250, blurOpacity: 0.6 }; }
+  });
+
+  const [dialogueSettings, setDialogueSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem('needy_dialogue_settings');
+      return raw ? JSON.parse(raw) : { language: 'en', speechEnabled: true, speechRate: 0.9, speechPitch: 1.0, speechVolume: 1.0, selectedVoiceURI: '', showSubtitles: true, dialogueCooldown: 6 };
+    } catch (_) { return { language: 'en', speechEnabled: true, speechRate: 0.9, speechPitch: 1.0, speechVolume: 1.0, selectedVoiceURI: '', showSubtitles: true, dialogueCooldown: 6 }; }
+  });
+
+  // Save settings to LocalStorage on update
+  useEffect(() => { localStorage.setItem('needy_dialogues', JSON.stringify(dialogues)); }, [dialogues]);
+  useEffect(() => { localStorage.setItem('needy_tear_settings', JSON.stringify(tearSettings)); }, [tearSettings]);
+  useEffect(() => { localStorage.setItem('needy_bg_settings', JSON.stringify(bgSettings)); }, [bgSettings]);
+  useEffect(() => { localStorage.setItem('needy_blur_settings', JSON.stringify(blurSettings)); }, [blurSettings]);
+  useEffect(() => { localStorage.setItem('needy_dialogue_settings', JSON.stringify(dialogueSettings)); }, [dialogueSettings]);
+
+  // Dialogue Modal State
+  const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
+  const [editingDialogue, setEditingDialogue] = useState(null);
+
+  // Subtitle State
+  const [subtitleData, setSubtitleData] = useState({ text: '', isSpeaking: false, language: 'en' });
 
   // Phase 1 — Webcam
   const { videoRef, isReady, error: camError, isLoading } = useWebcam();
@@ -39,7 +105,7 @@ export default function App() {
     thresholds, setThresholds,
   } = useGaze(videoRef, isReady);
 
-  // Phase 3 — Emotional state machine & debounced transition engine
+  // Phase 3 — Emotional state machine
   const {
     state, timers, transitions, forceState, setSpeed,
     stateThreshold, setStateThreshold,
@@ -53,8 +119,9 @@ export default function App() {
 
   const meta = STATE_META[state] || STATE_META.ignored;
   const color = meta.color;
+  const bgTheme = EMOTION_GRADIENTS[state] || EMOTION_GRADIENTS.ignored;
 
-  // Track longest sustained contact across the session
+  // Track longest eye contact duration
   const maxContactRef = useRef(0);
   if (timers.contactTime > maxContactRef.current) {
     maxContactRef.current = timers.contactTime;
@@ -83,9 +150,26 @@ export default function App() {
     }
   }
 
+  // Dialogue Modal Handlers
+  function handleSaveDialogue(newDlg) {
+    setDialogues((prev) => {
+      const idx = prev.findIndex((d) => d.id === newDlg.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = newDlg;
+        return copy;
+      }
+      return [...prev, newDlg];
+    });
+  }
+
+  function handleDeleteDialogue(id) {
+    setDialogues((prev) => prev.filter((d) => d.id !== id));
+  }
+
   return (
     <div className="app">
-      {/* Hidden webcam — tiny preview bottom-right */}
+      {/* Hidden webcam preview */}
       <video
         ref={videoRef}
         autoPlay
@@ -95,10 +179,16 @@ export default function App() {
         aria-label="Webcam preview"
       />
 
-      {/* Ambient colour glow that shifts with emotional state */}
+      {/* Emotion-responsive Background Ambient Gradient */}
       <div
         className="ambient-glow"
-        style={{ background: `radial-gradient(ellipse at 50% 42%, ${color}1e 0%, transparent 68%)` }}
+        style={{
+          background: bgSettings.bgGradientEnabled
+            ? `radial-gradient(ellipse at 50% 40%, ${bgTheme.c1} 0%, ${bgTheme.c2} 55%, var(--bg) 95%)`
+            : `radial-gradient(ellipse at 50% 42%, ${color}1e 0%, transparent 68%)`,
+          opacity: bgSettings.bgGradientIntensity,
+          transition: `background ${2.0 / bgSettings.bgTransitionSpeed}s ease, opacity 0.5s ease`,
+        }}
       />
 
       {/* ── Header ── */}
@@ -152,14 +242,34 @@ export default function App() {
       {/* ── Main stage ── */}
       {!camError && !isLoading && (
         <main className="stage">
-          {/* Googly eyes canvas */}
-          <div className="eyes-wrap" style={{ '--eye-glow': color }}>
-            <GooglyEyes
-              state={state}
-              eyeMovementSpeed={eyeMovementSpeed}
-              sneakPeekInfo={sneakPeekInfo}
+          {/* Eyes wrapper container with dark black depth blur behind eyes */}
+          <div className="eyes-outer-container">
+            <div
+              className="eye-black-blur"
+              style={{
+                width: `${blurSettings.blurSize}px`,
+                height: `${blurSettings.blurSize * 0.55}px`,
+                filter: `blur(${Math.max(12, 40 * blurSettings.blurIntensity)}px)`,
+                opacity: blurSettings.blurOpacity * (0.35 + 0.65 * (sneakPeekInfo?.discomfortLevel || 0.2)),
+              }}
             />
+            <div className="eyes-wrap" style={{ '--eye-glow': color }}>
+              <GooglyEyes
+                state={state}
+                eyeMovementSpeed={eyeMovementSpeed}
+                sneakPeekInfo={sneakPeekInfo}
+                tearSettings={tearSettings}
+              />
+            </div>
           </div>
+
+          {/* Subtitle Dialogue Bubble */}
+          {dialogueSettings.showSubtitles && subtitleData.text && (
+            <div className={`subtitle-bubble ${subtitleData.isSpeaking ? 'subtitle-bubble--active' : ''}`}>
+              <span className="subtitle-text">{subtitleData.text}</span>
+              <span className="subtitle-speaker">🔊</span>
+            </div>
+          )}
 
           {/* Emotional state label + message */}
           <div className="state-info">
@@ -183,10 +293,21 @@ export default function App() {
         </main>
       )}
 
-      {/* ── Voice lines engine (headless) ── */}
-      <VoiceEngine state={state} />
+      {/* ── Voice & Dialogue Speech Engine (Headless) ── */}
+      <VoiceEngine
+        state={state}
+        dialogues={dialogues}
+        language={dialogueSettings.language}
+        speechEnabled={dialogueSettings.speechEnabled}
+        speechRate={dialogueSettings.speechRate}
+        speechPitch={dialogueSettings.speechPitch}
+        speechVolume={dialogueSettings.speechVolume}
+        selectedVoiceURI={dialogueSettings.selectedVoiceURI}
+        dialogueCooldown={dialogueSettings.dialogueCooldown}
+        onSubtitleChange={setSubtitleData}
+      />
 
-      {/* ── Debug panel (slide-in from right with close button) ── */}
+      {/* ── Debug Panel ── */}
       {showDebug && (
         <DebugPanel
           gazeStatus={gazeStatus}
@@ -215,8 +336,29 @@ export default function App() {
           sneakPeekCooldown={sneakPeekCooldown}
           setSneakPeekCooldown={setSneakPeekCooldown}
           sneakPeekInfo={sneakPeekInfo}
+          tearSettings={tearSettings}
+          setTearSettings={setTearSettings}
+          bgSettings={bgSettings}
+          setBgSettings={setBgSettings}
+          blurSettings={blurSettings}
+          setBlurSettings={setBlurSettings}
+          dialogueSettings={dialogueSettings}
+          setDialogueSettings={setDialogueSettings}
+          dialogues={dialogues}
+          setDialogues={setDialogues}
+          onOpenAddDialogueModal={() => { setEditingDialogue(null); setIsDialogueModalOpen(true); }}
+          onEditDialogue={(dlg) => { setEditingDialogue(dlg); setIsDialogueModalOpen(true); }}
+          onDeleteDialogue={handleDeleteDialogue}
         />
       )}
+
+      {/* ── Dialogue Modal ── */}
+      <DialogueModal
+        isOpen={isDialogueModalOpen}
+        onClose={() => setIsDialogueModalOpen(false)}
+        onSave={handleSaveDialogue}
+        editingDialogue={editingDialogue}
+      />
 
       {/* ── Leaderboard modal ── */}
       {showLeaderboard && (

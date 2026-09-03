@@ -46,19 +46,23 @@ npm run dev
 ### Project Documentation
 For Software:
 
-# Screenshots (Add at least 3)
+# Screenshots
+
 ![Screenshot1](docs/screenshot1.jpg)
-*Needy in "I See You" state when sustained eye contact is detected, complete with glowing ambient cyan aesthetics and state indicator.*
+*Default theme — The app's idle "I See You" state. Two large 3D cartoon googly eyes with yellow-gold rims rest at screen center. Below them is a glassmorphic state panel and a green "Eye contact ✓" status pill.*
 
 ![Screenshot2](docs/screenshot2.jpg)
-*Needy transitioning into the "Offended" emotional state when the user looks away from the screen.*
+*"Offended" state — After 16 seconds of the user looking away, eyelids drop heavily in a scowl, the iris turns red-orange, and the background shifts to a warm ominous gradient.*
 
 ![Screenshot3](docs/screenshot3.jpg)
-*Interactive Debug Panel allowing real-time tuning of gaze thresholds, head pose metrics, emotional state overrides, and localStorage leaderboard ranking.*
+*Debug Panel open — The slide-out Debug Panel shows live Gaze & Eye Closure Telemetry (EAR, face detection), State Machine Controls with sliders, and Force State buttons for every emotion.*
+
+![Screenshot4](docs/screenshot4.jpg)
+*"Uncomfortable" state with Tear — After 6 seconds of sustained staring, the eyelids rise anxiously, the iris shifts to cyan, and a small glossy teardrop forms at the lower inner tear duct.*
 
 # Diagrams
 ![Workflow](docs/workflow.jpg)
-*System architecture flowchart showing MediaPipe landmark processing, gaze ratio analysis, state machine hysteresis, and reactive audio/visual outputs.*
+*System architecture: MediaPipe FaceMesh → Gaze/EAR analysis → Emotional State Machine → Reactive Canvas Eyes + Web Speech TTS*
 
 For Hardware:
 
@@ -70,11 +74,11 @@ For Hardware:
 
 ### Project Demo
 # Video
-[Demo Video Link]
-*Demonstrating real-time face tracking, emotional state transitions, passive-aggressive voice commentary, and leaderboard submission.*
+[▶️ Watch Demo on YouTube / Drive](#)
+*Real-time face tracking, emotional state transitions across 11 states, shy mode, passive-aggressive voice commentary (English & Malayalam), Neon Void theme toggle, and leaderboard.*
 
 # Additional Demos
-[Live Web App Demo]
+[🚀 Live Web App — run `npm run dev` locally]
 
 ## Team Contributions
 - Shivani Manoj: Core application development, MediaPipe gaze tracking, React UI design, emotional state machine, voice synthesis integration, and LocalStorage leaderboard management.

@@ -5,7 +5,6 @@ import { useEyeState } from './hooks/useEyeState';
 import { GooglyEyes } from './components/GooglyEyes';
 import { VoiceEngine } from './components/VoiceEngine';
 import { DebugPanel } from './components/DebugPanel';
-import { Leaderboard } from './components/Leaderboard';
 import { DialogueModal } from './components/DialogueModal';
 import { defaultDialogues } from './data/voiceLines';
 
@@ -66,11 +65,6 @@ const DEFAULT_DIALOGUE_SETTINGS = {
 
 export default function App() {
   const [showDebug, setShowDebug] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [playerName, setPlayerName] = useState('');
-  const [sessionSaved, setSessionSaved] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [testVoiceTrigger, setTestVoiceTrigger] = useState(0);
 
   // ── Persistent Settings (LocalStorage) ───────────────────────────────────
@@ -166,29 +160,6 @@ export default function App() {
     maxContactRef.current = timers.contactTime;
   }
 
-  function saveSession() {
-    if (!playerName.trim() || isSaving) return;
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const raw = localStorage.getItem('needy_leaderboard');
-      const entries = raw ? JSON.parse(raw) : [];
-      const newEntry = {
-        name: playerName.trim(),
-        longestEyeContact: maxContactRef.current,
-        createdAt: new Date().toISOString(),
-      };
-      entries.push(newEntry);
-      entries.sort((a, b) => (b.longestEyeContact || 0) - (a.longestEyeContact || 0));
-      localStorage.setItem('needy_leaderboard', JSON.stringify(entries.slice(0, 50)));
-      setSessionSaved(true);
-    } catch (e) {
-      setSaveError(e.message);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   // Dialogue Modal Handlers
   function handleSaveDialogue(newDlg) {
     setDialogues((prev) => {
@@ -262,26 +233,11 @@ export default function App() {
             </span>
           )}
           <button
-            id="theme-toggle"
-            className="btn-ghost"
-            onClick={() => setTheme((t) => (t === 'default' ? 'neon-void' : 'default'))}
-            title="Toggle Visual Theme"
-          >
-            {theme === 'neon-void' ? '🌌 Neon Void' : '🎨 Default'}
-          </button>
-          <button
             id="debug-toggle"
             className="btn-ghost"
             onClick={() => setShowDebug((v) => !v)}
           >
             {showDebug ? '🔒 Hide Debug' : '🔧 Debug'}
-          </button>
-          <button
-            id="leaderboard-btn"
-            className="btn-ghost"
-            onClick={() => setShowLeaderboard((v) => !v)}
-          >
-            🏆 Leaderboard
           </button>
         </div>
       </header>
@@ -439,43 +395,6 @@ export default function App() {
         onSave={handleSaveDialogue}
         editingDialogue={editingDialogue}
       />
-
-      {/* ── Leaderboard modal ── */}
-      {showLeaderboard && (
-        <Leaderboard onClose={() => setShowLeaderboard(false)} />
-      )}
-
-      {/* ── Save session bar ── */}
-      {transitions.length > 0 && !sessionSaved && !camError && (
-        <div className="save-bar">
-          <span className="save-label">Save to leaderboard</span>
-          <input
-            id="player-name-input"
-            type="text"
-            className="save-input"
-            placeholder="Your name…"
-            value={playerName}
-            maxLength={32}
-            onChange={(e) => setPlayerName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && saveSession()}
-          />
-          <button
-            id="save-btn"
-            className="btn-primary"
-            disabled={!playerName.trim() || isSaving}
-            onClick={saveSession}
-          >
-            {isSaving ? '…' : '💾 Save'}
-          </button>
-          {saveError && <span className="save-error">⚠️ {saveError}</span>}
-        </div>
-      )}
-
-      {sessionSaved && (
-        <div className="save-bar save-bar--done">
-          ✅ Saved! Open the leaderboard to see your rank.
-        </div>
-      )}
     </div>
   );
 }

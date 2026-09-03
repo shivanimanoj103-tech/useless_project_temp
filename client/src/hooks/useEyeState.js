@@ -6,23 +6,23 @@ import { useEffect, useRef, useState, useCallback } from 'react';
  */
 const BRANCH_A_TIMINGS = [
   { state: 'friendly',           time: 0 },
-  { state: 'shy',                time: 3.5 },
-  { state: 'uncomfortable',      time: 7.0 },
+  { state: 'shy',                time: 4.0 },
+  { state: 'uncomfortable',      time: 8.0 },
   { state: 'very_uncomfortable',  time: 12.0 },
-  { state: 'peak_uncomfortable',  time: 17.0 },
+  { state: 'peak_uncomfortable',  time: 16.0 },
 ];
 
 /**
  * Branch B: User is LOOKING AWAY from the eyes
- * Progression: IGNORED → MILD ANNOYANCE → ANNOYED → OFFENDED → PETTY → OVER IT
+ * Progression: IGNORED → MILD ANNOYANCE → ANNOYED → OFFENDED → PETTY → OVER IT (every 4 seconds)
  */
 const BRANCH_B_TIMINGS = [
   { state: 'ignored',        time: 0 },
   { state: 'mild_annoyance', time: 4.0 },
-  { state: 'annoyed',        time: 9.0 },
-  { state: 'offended',       time: 16.0 },
-  { state: 'petty',          time: 28.0 },
-  { state: 'over_it',        time: 45.0 },
+  { state: 'annoyed',        time: 8.0 },
+  { state: 'offended',       time: 12.0 },
+  { state: 'petty',          time: 16.0 },
+  { state: 'over_it',        time: 20.0 },
 ];
 
 const BRANCH_A_SET = new Set(BRANCH_A_TIMINGS.map((item) => item.state));

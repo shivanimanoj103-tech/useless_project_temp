@@ -38,7 +38,7 @@ export function useEyeState(isLookingAtScreen) {
 
   // ── Configurable debug parameters with natural defaults ────────────────────
   const [stateThreshold, setStateThreshold] = useState(5);        // Range 1-10 (default 5 = 1.0x scale)
-  const [transitionDelay, setTransitionDelay] = useState(0.3);    // Range 0.1-1.0s (debounce for cross-branch switch <= 1s)
+  const [transitionDelay, setTransitionDelay] = useState(1.0);    // Default 1.0s response delay
   const [eyeMovementSpeed, setEyeMovementSpeed] = useState(0.08);  // Range 0.02-0.20
   const [discomfortIntensity, setDiscomfortIntensity] = useState(5); // Range 1-10
   const [sneakPeekDuration, setSneakPeekDuration] = useState(1.2);  // Range 0.5-3s (how long one-eye peek lasts)
@@ -149,8 +149,8 @@ export function useEyeState(isLookingAtScreen) {
 
       // ── 1. CROSS-BRANCH SWITCHING (MAX RESPONSE TIME <= 1.0 SECOND) ────────
       if (targetBranch !== currentBranch) {
-        // Debounce to filter micro-glitches/single-frame blinks (e.g. 0.25s, strictly <= 0.5s)
-        const branchDebounce = Math.min(0.35, Math.max(0.15, delayRef.current));
+        // Debounce before switching branches on gaze change
+        const branchDebounce = Math.max(0.5, delayRef.current);
 
         if (pendingBranchRef.current === targetBranch) {
           pendingBranchTimeRef.current += delta;

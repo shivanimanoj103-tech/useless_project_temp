@@ -41,7 +41,7 @@ function Slider({ label, min, max, step, value, onChange }) {
 
 export function DebugPanel({
   theme = 'default', setTheme,
-  gazeStatus, faceDetected, isLookingAtScreen, yawRatio, pitchRatio,
+  gazeStatus, faceDetected, isLookingAtScreen, isEyesClosed, avgEAR, yawRatio, pitchRatio,
   thresholds, onThresholdChange,
   state, timers, transitions,
   forceState, setSpeed,
@@ -120,6 +120,44 @@ export function DebugPanel({
           </Row>
         </section>
       )}
+
+      {/* ── Gaze & Eye Aspect Ratio (EAR) Telemetry ── */}
+      <section className="db-section">
+        <h4 className="db-heading">Gaze & Eye Closure Telemetry</h4>
+        <Row label="Model status">
+          <span className={`db-badge db-badge--${gazeStatus}`}>{gazeStatus}</span>
+        </Row>
+        <Row label="Face detected"><Pill val={faceDetected} /></Row>
+        <Row label="Eyes Closed Detection">
+          <span className={isEyesClosed ? 'db-pill db-pill--false' : 'db-pill db-pill--true'}>
+            {isEyesClosed ? 'Closed 🙈' : 'Open 👀'}
+          </span>
+        </Row>
+        <Row label="isLookingAtScreen"><Pill val={isLookingAtScreen} /></Row>
+        <Row label="Avg EAR (Eye Aspect Ratio)">
+          <span>{avgEAR !== undefined ? avgEAR : 'N/A'} &nbsp;<span className="db-muted">(T: &lt;{thresholds.ear || 0.18})</span></span>
+        </Row>
+        <Row label="Yaw ratio">
+          {yawRatio} &nbsp;<span className="db-muted">(±{thresholds.yaw})</span>
+        </Row>
+        <Row label="Pitch ratio">
+          {pitchRatio} &nbsp;<span className="db-muted">([{thresholds.pitchMin}–{thresholds.pitchMax}])</span>
+        </Row>
+
+        <h5 className="db-sub">Eye Closure & Gaze Threshold Tuning</h5>
+        <Slider label={`EAR Closure Threshold: ${thresholds.ear || 0.18}`} min={0.10} max={0.30} step={0.01}
+          value={thresholds.ear || 0.18}
+          onChange={(v) => onThresholdChange((t) => ({ ...t, ear: v }))} />
+        <Slider label={`Yaw ±${thresholds.yaw}`} min={0.05} max={0.7} step={0.05}
+          value={thresholds.yaw}
+          onChange={(v) => onThresholdChange((t) => ({ ...t, yaw: v }))} />
+        <Slider label={`Pitch min ${thresholds.pitchMin}`} min={0.0} max={0.4} step={0.05}
+          value={thresholds.pitchMin}
+          onChange={(v) => onThresholdChange((t) => ({ ...t, pitchMin: v }))} />
+        <Slider label={`Pitch max ${thresholds.pitchMax}`} min={0.5} max={1.0} step={0.05}
+          value={thresholds.pitchMax}
+          onChange={(v) => onThresholdChange((t) => ({ ...t, pitchMax: v }))} />
+      </section>
 
       {/* ── 1. REALISTIC TEARS & ORIGIN CONTROLS ── */}
       <section className="db-section">

@@ -124,9 +124,9 @@ export default function App() {
   // Phase 1 — Webcam
   const { videoRef, isReady, error: camError, isLoading } = useWebcam();
 
-  // Phase 2 — Gaze detection
+  // Phase 2 — Gaze & Eye Closure detection
   const {
-    isLookingAtScreen, faceDetected, yawRatio, pitchRatio,
+    isLookingAtScreen, faceDetected, isEyesClosed, avgEAR, yawRatio, pitchRatio,
     status: gazeStatus, loadError,
     thresholds, setThresholds,
   } = useGaze(videoRef, isReady);
@@ -339,9 +339,11 @@ export default function App() {
             <span className="gaze-label">
               {!faceDetected
                 ? 'No face detected'
-                : isLookingAtScreen
-                  ? 'Eye contact ✓'
-                  : 'Looking away'}
+                : isEyesClosed
+                  ? 'Eyes closed 🙈'
+                  : isLookingAtScreen
+                    ? 'Eye contact ✓'
+                    : 'Looking away'}
             </span>
           </div>
         </main>
@@ -370,6 +372,8 @@ export default function App() {
           gazeStatus={gazeStatus}
           faceDetected={faceDetected}
           isLookingAtScreen={isLookingAtScreen}
+          isEyesClosed={isEyesClosed}
+          avgEAR={avgEAR}
           yawRatio={yawRatio}
           pitchRatio={pitchRatio}
           thresholds={thresholds}

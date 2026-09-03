@@ -2,6 +2,8 @@
 
 # Needy 🎯
 
+**Live App:** [https://needy-two.vercel.app/](https://needy-two.vercel.app/)
+
 ## Basic Details
 ### Team Name: Beta
 
@@ -78,7 +80,7 @@ For Hardware:
 *Real-time face tracking, emotional state transitions across 11 states, shy mode, passive-aggressive voice commentary (English & Malayalam), Neon Void theme toggle, and leaderboard.*
 
 # Additional Demos
-[🚀 Live Web App — run `npm run dev` locally]
+[🚀 Live Web App](https://needy-two.vercel.app/)
 
 ## Team Contributions
 - Shivani Manoj: Core application development, MediaPipe gaze tracking, React UI design, emotional state machine, voice synthesis integration, and LocalStorage leaderboard management.

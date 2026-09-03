@@ -327,27 +327,30 @@ export default function App() {
             </div>
           )}
 
-          {/* Emotional state label + message */}
+          {/* Emotional state label + message — glassmorphic card */}
           <div className="state-info">
-            <div className="state-badge" style={{ color, borderColor: `${color}88` }}>
-              {meta.label.toUpperCase()}
+            <div className="state-card" style={{ borderColor: `${color}28` }}>
+              <div className="state-badge" style={{ color }}>
+                {meta.label}
+              </div>
+              <p className="state-msg">{meta.msg}</p>
             </div>
-            <p className="state-msg">{meta.msg}</p>
+
+            {/* Gaze status pill */}
+            <div className={`gaze-row ${isLookingAtScreen ? 'gaze-row--on' : 'gaze-row--off'}`}>
+              <span className={`gaze-dot ${isLookingAtScreen ? 'gaze-dot--on' : 'gaze-dot--off'}`} />
+              <span>
+                {!faceDetected
+                  ? '👁 No face detected'
+                  : isEyesClosed
+                    ? '🙈 Eyes closed'
+                    : isLookingAtScreen
+                      ? 'Eye contact ✓'
+                      : '👁 Looking away'}
+              </span>
+            </div>
           </div>
 
-          {/* Gaze status indicator */}
-          <div className="gaze-row">
-            <span className={`gaze-dot ${isLookingAtScreen ? 'gaze-dot--on' : 'gaze-dot--off'}`} />
-            <span className="gaze-label">
-              {!faceDetected
-                ? 'No face detected'
-                : isEyesClosed
-                  ? 'Eyes closed 🙈'
-                  : isLookingAtScreen
-                    ? 'Eye contact ✓'
-                    : 'Looking away'}
-            </span>
-          </div>
         </main>
       )}
 

@@ -109,14 +109,15 @@ body {
 }
 
 .app-logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.45em;
-  background: var(--logo-gradient, linear-gradient(135deg, #f0eaf8 30%, #9b88b0 100%));
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: 0.55em;
+  background: var(--logo-gradient, linear-gradient(135deg, #ffffff 40%, #9b88b0 100%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   user-select: none;
+  text-transform: uppercase;
 }
 
 .header-actions {
@@ -141,21 +142,23 @@ body {
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn-ghost {
-  background: var(--glass);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  padding: 8px 18px;
+  border-radius: 99px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  backdrop-filter: blur(8px);
 }
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--text);
-  border-color: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.25);
+  transform: translateY(-1px);
 }
 
 .btn-primary {
@@ -211,70 +214,104 @@ body {
   gap: 0;
   position: relative;
   z-index: 2;
-  padding: 24px 20px 80px;
+  padding: 16px 20px 90px;
   min-height: 0;
 }
 
-/* Googly eyes canvas container */
+/* Googly eyes canvas container — bigger, dominant */
 .eyes-wrap {
-  width: min(580px, 92vw);
-  height: min(250px, 38vh);
+  width: min(700px, 96vw);
+  height: min(320px, 48vh);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 42px color-mix(in srgb, var(--eye-glow, #5b86e5) 40%, transparent));
+  filter: drop-shadow(0 0 55px color-mix(in srgb, var(--eye-glow, #5b86e5) 55%, transparent));
   transition: filter 1.2s ease;
 }
 
-/* ── State display ───────────────────────────────────────────────────────── */
+/* ── State display — glass card ──────────────────────────────────────────── */
 .state-info {
   text-align: center;
-  margin-top: 28px;
+  margin-top: 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Glassmorphic card wrapping state name + message */
+.state-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  padding: 18px 40px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 520px;
+  width: 90%;
+  transition: border-color 0.8s ease;
 }
 
 .state-badge {
-  display: inline-block;
-  border: 1.5px solid;
-  border-radius: 99px;
-  padding: 4px 20px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  transition: color 0.9s ease, border-color 0.9s ease;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  transition: color 0.7s ease;
+  line-height: 1.1;
 }
 
 .state-msg {
-  font-size: 1.05rem;
-  font-weight: 300;
-  color: var(--text-muted);
-  max-width: 480px;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.52);
+  max-width: 440px;
   line-height: 1.55;
-  min-height: 2em;
+  min-height: 1.4em;
   transition: opacity 0.4s ease;
 }
 
-/* ── Gaze indicator ──────────────────────────────────────────────────────── */
+/* ── Gaze indicator pill ─────────────────────────────────────────────────── */
 .gaze-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  margin-top: 18px;
-  font-size: 0.83rem;
-  color: var(--text-muted);
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 7px 20px 7px 14px;
+  border-radius: 99px;
+  transition: background 0.5s ease, border-color 0.5s ease, color 0.5s ease;
+}
+
+/* Looking at screen: green pill */
+.gaze-row--on {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1.5px solid rgba(46, 204, 113, 0.45);
+  color: #2ecc71;
+}
+
+/* Not looking / closed: red/amber pill */
+.gaze-row--off {
+  background: rgba(232, 76, 61, 0.12);
+  border: 1.5px solid rgba(232, 76, 61, 0.38);
+  color: #e84c3d;
 }
 
 .gaze-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
   transition: background 0.3s, box-shadow 0.3s;
 }
 .gaze-dot--on  {
   background: #2ecc71;
-  box-shadow: 0 0 8px #2ecc71;
+  box-shadow: 0 0 7px #2ecc71;
 }
 .gaze-dot--off {
   background: #e84c3d;

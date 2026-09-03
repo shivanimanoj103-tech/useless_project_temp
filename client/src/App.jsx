@@ -7,13 +7,18 @@ import { VoiceEngine } from './components/VoiceEngine';
 import { DebugPanel } from './components/DebugPanel';
 import { Leaderboard } from './components/Leaderboard';
 
+// Comprehensive emotional state metadata (Labels, messages, and color themes)
 const STATE_META = {
+  friendly: { label: 'HAPPY TO SEE YOU', msg: "Yay! You're back! I love attention!", color: '#4ade80' },
   ignored: { label: 'I See You', msg: "Hey. You came back. No big deal. (It's a big deal.)", color: '#5b86e5' },
-  mild_annoyance: { label: 'Mild Annoyance', msg: "Oh, is something else more interesting than me?", color: '#e8a838' },
-  offended: { label: 'Offended', msg: "I'm starting to take this personally.", color: '#e84c3d' },
-  petty: { label: 'Petty', msg: "Fine. Whatever. I've moved on. (I haven't.)", color: '#9b59b6' },
-  over_it: { label: 'Over It', msg: "I have achieved emotional detachment. Goodbye forever.", color: '#7f8c8d' },
-  uncomfortable: { label: 'UNCOMFORTABLE', msg: "OKAY. TOO MUCH. You can stop now. Please.", color: '#00d2ff' },
+  mild_annoyance: { label: 'Mild Annoyance', msg: "Oh, is something else more interesting than me?", color: '#f59e0b' },
+  annoyed: { label: 'Annoyed', msg: "Seriously? Still looking away? I am right here.", color: '#f97316' },
+  offended: { label: 'Offended', msg: "I'm starting to take this personally.", color: '#ef4444' },
+  petty: { label: 'Petty', msg: "Fine. Whatever. I've moved on. (I haven't.)", color: '#a855f7' },
+  over_it: { label: 'Over It', msg: "I have achieved emotional detachment. Goodbye forever.", color: '#64748b' },
+  uncomfortable: { label: 'UNCOMFORTABLE', msg: "OKAY. TOO MUCH. You can stop now. Please.", color: '#06b6d4' },
+  very_uncomfortable: { label: 'VERY UNCOMFORTABLE 💧', msg: "WHY ARE YOU STILL STARING?! I am getting teary-eyed!", color: '#0284c7' },
+  peak_uncomfortable: { label: 'PEAK UNCOMFORTABLE 🙈', msg: "EYES CLOSED! Peeking with one eye... PLEASE STOP STARING!", color: '#38bdf8' },
 };
 
 export default function App() {
@@ -34,8 +39,17 @@ export default function App() {
     thresholds, setThresholds,
   } = useGaze(videoRef, isReady);
 
-  // Phase 3 — Emotional state machine
-  const { state, timers, transitions, forceState, setSpeed } = useEyeState(isLookingAtScreen);
+  // Phase 3 — Emotional state machine & debounced transition engine
+  const {
+    state, timers, transitions, forceState, setSpeed,
+    stateThreshold, setStateThreshold,
+    transitionDelay, setTransitionDelay,
+    eyeMovementSpeed, setEyeMovementSpeed,
+    discomfortIntensity, setDiscomfortIntensity,
+    sneakPeekDuration, setSneakPeekDuration,
+    sneakPeekCooldown, setSneakPeekCooldown,
+    sneakPeekInfo,
+  } = useEyeState(isLookingAtScreen);
 
   const meta = STATE_META[state] || STATE_META.ignored;
   const color = meta.color;
@@ -140,7 +154,11 @@ export default function App() {
         <main className="stage">
           {/* Googly eyes canvas */}
           <div className="eyes-wrap" style={{ '--eye-glow': color }}>
-            <GooglyEyes state={state} />
+            <GooglyEyes
+              state={state}
+              eyeMovementSpeed={eyeMovementSpeed}
+              sneakPeekInfo={sneakPeekInfo}
+            />
           </div>
 
           {/* Emotional state label + message */}
@@ -168,7 +186,7 @@ export default function App() {
       {/* ── Voice lines engine (headless) ── */}
       <VoiceEngine state={state} />
 
-      {/* ── Debug panel (slide-in from right) ── */}
+      {/* ── Debug panel (slide-in from right with close button) ── */}
       {showDebug && (
         <DebugPanel
           gazeStatus={gazeStatus}
@@ -183,6 +201,20 @@ export default function App() {
           transitions={transitions}
           forceState={forceState}
           setSpeed={setSpeed}
+          onClose={() => setShowDebug(false)}
+          stateThreshold={stateThreshold}
+          setStateThreshold={setStateThreshold}
+          transitionDelay={transitionDelay}
+          setTransitionDelay={setTransitionDelay}
+          eyeMovementSpeed={eyeMovementSpeed}
+          setEyeMovementSpeed={setEyeMovementSpeed}
+          discomfortIntensity={discomfortIntensity}
+          setDiscomfortIntensity={setDiscomfortIntensity}
+          sneakPeekDuration={sneakPeekDuration}
+          setSneakPeekDuration={setSneakPeekDuration}
+          sneakPeekCooldown={sneakPeekCooldown}
+          setSneakPeekCooldown={setSneakPeekCooldown}
+          sneakPeekInfo={sneakPeekInfo}
         />
       )}
 

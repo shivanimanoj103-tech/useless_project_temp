@@ -1,19 +1,26 @@
 import { useEffect, useRef } from 'react';
 
-// Must match --bg in index.css so eyelids "cut into" the sclera convincingly
+// Background color matching --bg in index.css for realistic eyelid masks
 const BG = '#0d0618';
 
-// Per-state visual config
-const S = {
-  ignored: { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.22, lerpSpd: 0.05, dartEvery: 90 },
-  mild_annoyance: { lidT: 0.35, lidB: 0.06, pupR: 0.40, hue: '#e8a838', wander: 0.38, lerpSpd: 0.07, dartEvery: 70 },
-  offended: { lidT: 0.50, lidB: 0.05, pupR: 0.36, hue: '#e84c3d', wander: 0.52, lerpSpd: 0.09, dartEvery: 40 },
-  petty: { lidT: 0.65, lidB: 0.06, pupR: 0.32, hue: '#9b59b6', wander: 0.65, lerpSpd: 0.05, dartEvery: 110 },
-  over_it: { lidT: 0.80, lidB: 0.04, pupR: 0.28, hue: '#7f8c8d', wander: 0.72, lerpSpd: 0.04, dartEvery: 130 },
-  uncomfortable: { lidT: 0.00, lidB: 0.00, pupR: 0.20, hue: '#00d2ff', wander: 0.90, lerpSpd: 0.20, dartEvery: 16 },
+/**
+ * Visual configuration per emotional state.
+ * Includes eyelid top/bottom ratios, pupil size, iris hue, wander distance, and lerp speed.
+ */
+const STATE_CONFIGS = {
+  friendly: { lidT: 0.05, lidB: 0.38, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
+  ignored: { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.20, lerpSpd: 0.05, dartEvery: 90 },
+  mild_annoyance: { lidT: 0.25, lidB: 0.05, pupR: 0.40, hue: '#f59e0b', wander: 0.28, lerpSpd: 0.05, dartEvery: 80 },
+  annoyed: { lidT: 0.40, lidB: 0.06, pupR: 0.38, hue: '#f97316', wander: 0.35, lerpSpd: 0.06, dartEvery: 65 },
+  offended: { lidT: 0.55, lidB: 0.06, pupR: 0.36, hue: '#ef4444', wander: 0.45, lerpSpd: 0.06, dartEvery: 50 },
+  petty: { lidT: 0.68, lidB: 0.06, pupR: 0.32, hue: '#a855f7', wander: 0.55, lerpSpd: 0.05, dartEvery: 100 },
+  over_it: { lidT: 0.82, lidB: 0.04, pupR: 0.28, hue: '#64748b', wander: 0.60, lerpSpd: 0.04, dartEvery: 120 },
+  uncomfortable: { lidT: 0.15, lidB: 0.10, pupR: 0.25, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 45 },
+  very_uncomfortable: { lidT: 0.30, lidB: 0.20, pupR: 0.22, hue: '#0284c7', wander: 0.40, lerpSpd: 0.09, dartEvery: 35 },
+  peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.25, lerpSpd: 0.10, dartEvery: 30 },
 };
 
-// ── Utilities ──────────────────────────────────────────────────────────────
+// ── Math & Color Helpers ────────────────────────────────────────────────────
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 function hexParts(hex) {
@@ -29,7 +36,7 @@ function darken(hex, amt) {
   return `rgb(${Math.max(0, r - amt)},${Math.max(0, g - amt)},${Math.max(0, b - amt)})`;
 }
 
-// ── Draw one eye ───────────────────────────────────────────────────────────
+// ── Draw one eye (Sclera, Iris, Pupil, specular highlights, Eyelid masks) ──
 function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.save();
 
@@ -38,7 +45,7 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.shadowBlur = 26;
   ctx.shadowOffsetY = 7;
 
-  // Sclera (white ball with radial gradient for 3-D pop)
+  // Sclera (3D radial gradient sphere)
   const sg = ctx.createRadialGradient(cx - R * 0.22, cy - R * 0.22, 0, cx, cy, R);
   sg.addColorStop(0, '#ffffff');
   sg.addColorStop(0.7, '#f0f0f0');
@@ -49,19 +56,19 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.fill();
   ctx.shadowColor = 'transparent';
 
-  // Clip everything inside the sclera circle
+  // Clip content inside sclera
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  // Pupil position (offset within eye)
-  const epx = cx + px * R * 0.48;
-  const epy = cy + py * R * 0.48;
-  const iR = R * pupR * 1.55;   // iris radius
-  const pR = R * pupR;          // pupil radius
+  // Synchronized Pupil & Iris position (clamped safely within eye bounds)
+  const epx = cx + px * R * 0.44;
+  const epy = cy + py * R * 0.44;
+  const iR = R * pupR * 1.55; // Iris radius
+  const pR = R * pupR;        // Pupil radius
 
-  // Iris
+  // Iris gradient
   const ig = ctx.createRadialGradient(epx - iR * 0.3, epy - iR * 0.3, 0, epx, epy, iR);
   ig.addColorStop(0, lighten(hue, 65));
   ig.addColorStop(0.45, hue);
@@ -91,32 +98,31 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.fillStyle = pg;
   ctx.fill();
 
-  // Primary specular highlight
+  // Primary & secondary specular reflections
   ctx.beginPath();
   ctx.arc(epx - pR * 0.3, epy - pR * 0.35, pR * 0.28, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255,255,255,0.96)';
   ctx.fill();
 
-  // Secondary small highlight
   ctx.beginPath();
   ctx.arc(epx + pR * 0.18, epy + pR * 0.2, pR * 0.12, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.fill();
 
-  // ── Eyelid masks (fill BG colour = gives "closing" illusion) ──
-  const topLid = Math.min(1, lidT + Math.max(0, blink));
+  // ── Eyelid Masks (Top and Bottom Eyelids) ──
+  const topLid = Math.min(1.0, lidT + Math.max(0, blink));
   if (topLid > 0.003) {
     ctx.fillStyle = BG;
-    ctx.fillRect(cx - R - 2, cy - R - 2, (R + 2) * 2, topLid * 2 * R + 2);
+    ctx.fillRect(cx - R - 4, cy - R - 4, (R + 4) * 2, topLid * 2 * R + 4);
   }
   if (lidB > 0.003) {
     ctx.fillStyle = BG;
-    ctx.fillRect(cx - R - 2, cy + R - lidB * 2 * R, (R + 2) * 2, lidB * 2 * R + 2);
+    ctx.fillRect(cx - R - 4, cy + R - lidB * 2 * R, (R + 4) * 2, lidB * 2 * R + 4);
   }
 
   ctx.restore(); // end clip
 
-  // Yellow googly rim
+  // Outer googly rim
   ctx.beginPath();
   ctx.arc(cx, cy, R + 11, 0, Math.PI * 2);
   ctx.strokeStyle = '#f5c842';
@@ -140,20 +146,79 @@ function drawEye(ctx, cx, cy, R, { lidT, lidB, pupR, hue, px, py, blink }) {
   ctx.restore();
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
-export function GooglyEyes({ state }) {
+// ── Render Tear Droplets when Annoyed / Uncomfortable ─────────────────────
+function renderTears(ctx, tears, discomfortLevel) {
+  if (!tears || tears.length === 0) return;
+
+  for (let i = tears.length - 1; i >= 0; i--) {
+    const t = tears[i];
+    t.y += t.vy;
+    t.vy += 0.12; // gravity
+    t.alpha -= 0.015;
+    t.size += 0.03;
+
+    if (t.alpha <= 0) {
+      tears.splice(i, 1);
+      continue;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, discomfortLevel * 1.2));
+
+    // Tear drop path (teardrop shape)
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y - t.size * 1.5);
+    ctx.bezierCurveTo(
+      t.x + t.size * 1.2, t.y,
+      t.x + t.size * 1.2, t.y + t.size * 1.5,
+      t.x, t.y + t.size * 1.5
+    );
+    ctx.bezierCurveTo(
+      t.x - t.size * 1.2, t.y + t.size * 1.5,
+      t.x - t.size * 1.2, t.y,
+      t.x, t.y - t.size * 1.5
+    );
+
+    const tg = ctx.createLinearGradient(t.x, t.y - t.size, t.x, t.y + t.size);
+    tg.addColorStop(0, 'rgba(186, 230, 253, 0.9)');
+    tg.addColorStop(1, 'rgba(14, 165, 233, 0.75)');
+    ctx.fillStyle = tg;
+    ctx.fill();
+
+    // Tear specular highlight
+    ctx.beginPath();
+    ctx.arc(t.x - t.size * 0.3, t.y - t.size * 0.3, t.size * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ── GooglyEyes Component ────────────────────────────────────────────────────
+export function GooglyEyes({ state, eyeMovementSpeed = 0.08, sneakPeekInfo }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
-  const stateRef = useRef(state);
-  useEffect(() => { stateRef.current = state; }, [state]);
 
-  // All animation state lives in a ref — zero React re-renders in the loop
+  const stateRef = useRef(state);
+  const speedRef = useRef(eyeMovementSpeed);
+  const sneakRef = useRef(sneakPeekInfo);
+
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { speedRef.current = eyeMovementSpeed; }, [eyeMovementSpeed]);
+  useEffect(() => { sneakRef.current = sneakPeekInfo; }, [sneakPeekInfo]);
+
+  // Animation state ref (persists without React re-renders)
   const A = useRef({
-    lpx: 0, lpy: 0, lvx: 0, lvy: 0, ltx: 0, lty: 0,   // left pupil spring
-    rpx: 0, rpy: 0, rvx: 0, rvy: 0, rtx: 0, rty: 0,   // right pupil spring
-    lidT: 0.08, lidB: 0.04, pupR: 0.42,                  // interpolated visual params
+    // Left & Right pupil position / velocity
+    lpx: 0, lpy: 0, lvx: 0, lvy: 0,
+    rpx: 0, rpy: 0, rvx: 0, rvy: 0,
+    // Synchronized target gaze direction
+    tx: 0, ty: 0,
+    lidT: 0.08, lidB: 0.04, pupR: 0.42,
     blink: 0, blinking: false, blinkTimer: 0, nextBlink: 200,
     frame: 0,
+    tears: [], // Tear particle list
   });
 
   useEffect(() => {
@@ -161,7 +226,6 @@ export function GooglyEyes({ state }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Resize observer keeps canvas pixel size in sync with CSS size
     const ro = new ResizeObserver(() => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
@@ -172,76 +236,130 @@ export function GooglyEyes({ state }) {
 
     function render() {
       const a = A.current;
-      const cfg = S[stateRef.current] || S.ignored;
+      const curState = stateRef.current;
+      const cfg = STATE_CONFIGS[curState] || STATE_CONFIGS.ignored;
+      const sneak = sneakRef.current || {};
+      const spdMultiplier = speedRef.current || 0.08;
+
       const w = canvas.width;
       const h = canvas.height;
 
       ctx.clearRect(0, 0, w, h);
 
-      // Eye geometry — responsive to canvas size
+      // Eye geometry
       const R = Math.min(w * 0.20, h * 0.34, 128);
       const ey = h * 0.52;
       const lx = w / 2 - R * 1.38;
       const rx = w / 2 + R * 1.38;
 
-      // Smoothly lerp visual params toward current state target
+      // Smoothly lerp visual params toward state target
       a.lidT = lerp(a.lidT, cfg.lidT, cfg.lerpSpd);
       a.lidB = lerp(a.lidB, cfg.lidB, cfg.lerpSpd);
       a.pupR = lerp(a.pupR, cfg.pupR, cfg.lerpSpd);
 
-      // Recalculate pupil targets every N frames
+      // ── 1. Synchronized Natural Pupil Movement ───────────────────────────
       a.frame++;
       if (a.frame % cfg.dartEvery === 0) {
         const w_ = cfg.wander;
-        const cur = stateRef.current;
 
-        if (cur === 'petty' || cur === 'over_it') {
-          // Dramatic look-away
-          a.ltx = -w_ * 0.88; a.lty = -0.42;
-          a.rtx = w_ * 0.88; a.rty = -0.42;
-        } else if (cur === 'uncomfortable') {
-          // Rapid chaotic dart
-          a.ltx = (Math.random() - 0.5) * 1.5;
-          a.lty = (Math.random() - 0.5) * 1.5;
-          a.rtx = (Math.random() - 0.5) * 1.5;
-          a.rty = (Math.random() - 0.5) * 1.5;
+        if (curState === 'petty' || curState === 'over_it') {
+          // Dramatic side-glance (synchronized)
+          a.tx = -w_ * 0.75;
+          a.ty = -0.30;
+        } else if (curState === 'uncomfortable' || curState === 'very_uncomfortable') {
+          // Subtle look away (controlled range, no wild pupil roll)
+          const side = Math.random() > 0.5 ? 1 : -1;
+          a.tx = side * (0.15 + Math.random() * 0.25);
+          a.ty = (Math.random() - 0.5) * 0.20;
+        } else if (curState === 'friendly') {
+          // Happy centered look with subtle upward tilt
+          a.tx = (Math.random() - 0.5) * 0.10;
+          a.ty = -0.12;
         } else {
+          // Normal synchronized gaze wander
           const ang = Math.random() * Math.PI * 2;
-          const dist = Math.random() * w_;
-          const ang2 = ang + (Math.random() - 0.5) * 0.9;
-          const dst2 = Math.random() * w_;
-          a.ltx = Math.cos(ang) * dist;
-          a.lty = Math.sin(ang) * dist * 0.7;
-          a.rtx = Math.cos(ang2) * dst2;
-          a.rty = Math.sin(ang2) * dst2 * 0.7;
+          const dist = Math.random() * w_ * 0.65; // Clamped for natural look
+          a.tx = Math.cos(ang) * dist;
+          a.ty = Math.sin(ang) * dist * 0.7;
         }
       }
 
-      // Spring physics for silky smooth pupil movement
-      const sp = 0.09, dp = 0.78;
-      a.lvx += (a.ltx - a.lpx) * sp; a.lvy += (a.lty - a.lpy) * sp;
+      // Apply subtle micro-jitter so pupils stay strictly synchronized without looking rigid
+      const ltx = a.tx + (Math.random() - 0.5) * 0.02;
+      const lty = a.ty + (Math.random() - 0.5) * 0.02;
+      const rtx = a.tx + (Math.random() - 0.5) * 0.02;
+      const rty = a.ty + (Math.random() - 0.5) * 0.02;
+
+      // Spring physics interpolation (controlled by eyeMovementSpeed setting)
+      const sp = spdMultiplier, dp = 0.78;
+      a.lvx += (ltx - a.lpx) * sp; a.lvy += (lty - a.lpy) * sp;
       a.lvx *= dp; a.lvy *= dp;
       a.lpx += a.lvx; a.lpy += a.lvy;
 
-      a.rvx += (a.rtx - a.rpx) * sp; a.rvy += (a.rty - a.rpy) * sp;
+      a.rvx += (rtx - a.rpx) * sp; a.rvy += (rty - a.rpy) * sp;
       a.rvx *= dp; a.rvy *= dp;
       a.rpx += a.rvx; a.rpy += a.rvy;
 
-      // Blinking
-      a.blinkTimer++;
-      if (!a.blinking && a.blinkTimer >= a.nextBlink) {
-        a.blinking = true;
-        a.blinkTimer = 0;
-        a.nextBlink = 140 + Math.random() * 320;
-      }
-      if (a.blinking) {
-        a.blink = Math.sin((a.blinkTimer / 16) * Math.PI) * 0.55;
-        if (a.blinkTimer >= 16) { a.blinking = false; a.blink = 0; }
+      // ── 2. Blinking Logic ────────────────────────────────────────────────
+      if (curState !== 'peak_uncomfortable') {
+        a.blinkTimer++;
+        if (!a.blinking && a.blinkTimer >= a.nextBlink) {
+          a.blinking = true;
+          a.blinkTimer = 0;
+          a.nextBlink = 160 + Math.random() * 300;
+        }
+        if (a.blinking) {
+          a.blink = Math.sin((a.blinkTimer / 16) * Math.PI) * 0.55;
+          if (a.blinkTimer >= 16) { a.blinking = false; a.blink = 0; }
+        }
+      } else {
+        a.blink = 0;
       }
 
-      const base = { lidT: a.lidT, lidB: a.lidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue };
-      drawEye(ctx, lx, ey, R, { ...base, px: a.lpx, py: a.lpy });
-      drawEye(ctx, rx, ey, R, { ...base, px: a.rpx, py: a.rpy });
+      // ── 3. Eyelid Easing & One-Eye Sneak Peek Logic ──────────────────────
+      let leftLidT = a.lidT, rightLidT = a.lidT;
+      let leftLidB = a.lidB, rightLidB = a.lidB;
+
+      if (curState === 'peak_uncomfortable') {
+        if (sneak.eye === 'left') {
+          // Left eye peeks! Right eye stays closed!
+          leftLidT = 0.35; leftLidB = 0.15;
+          rightLidT = 1.0; rightLidB = 1.0;
+        } else if (sneak.eye === 'right') {
+          // Right eye peeks! Left eye stays closed!
+          leftLidT = 1.0; leftLidB = 1.0;
+          rightLidT = 0.35; rightLidB = 0.15;
+        } else {
+          // Both eyes closed
+          leftLidT = 1.0; leftLidB = 1.0;
+          rightLidT = 1.0; rightLidB = 1.0;
+        }
+      }
+
+      // Render Left & Right Eyes
+      const baseLeft = { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue };
+      const baseRight = { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue };
+
+      drawEye(ctx, lx, ey, R, { ...baseLeft, px: a.lpx, py: a.lpy });
+      drawEye(ctx, rx, ey, R, { ...baseRight, px: a.rpx, py: a.rpy });
+
+      // ── 4. Tear Generation & Rendering ──────────────────────────────────
+      const discomfort = sneak.discomfortLevel || 0;
+      if (discomfort > 0.25 && a.frame % Math.max(8, Math.floor(40 / (discomfort * 2))) === 0) {
+        // Spawn tear droplet from left or right eye socket
+        const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
+        const tearX = (eyeChoice === 'left' ? lx : rx) + (Math.random() - 0.5) * R * 0.8;
+        const tearY = ey + R * 0.75;
+        a.tears.push({
+          x: tearX,
+          y: tearY,
+          vy: 0.8 + Math.random() * 0.6,
+          size: 4 + Math.random() * 3,
+          alpha: 0.9,
+        });
+      }
+
+      renderTears(ctx, a.tears, discomfort);
 
       animRef.current = requestAnimationFrame(render);
     }

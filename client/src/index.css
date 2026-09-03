@@ -315,10 +315,43 @@ body {
   gap: 0;
 }
 
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
 .db-title {
   font-size: 0.95rem;
-  margin-bottom: 14px;
   color: var(--text);
+  margin: 0;
+}
+
+.db-close-btn {
+  background: rgba(232, 76, 61, 0.15);
+  border: 1px solid rgba(232, 76, 61, 0.35);
+  color: #e84c3d;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.db-close-btn:hover {
+  background: rgba(232, 76, 61, 0.3);
+  color: #ffffff;
+  border-color: #e84c3d;
+}
+
+.db-telemetry {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 10px 0;
 }
 
 .db-section { margin-bottom: 6px; }

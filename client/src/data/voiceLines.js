@@ -1,4 +1,12 @@
 export const voiceLines = {
+  friendly: [
+    "Yay! You're looking at me!",
+    "Hello friend! So good to see you!",
+    "I love when you give me attention!",
+    "Best day ever! You're staring right at me!",
+    "Hi hi hi! Don't look away!",
+  ],
+
   ignored: [
     "Hey…",
     "Oh hi. You're back.",
@@ -17,7 +25,15 @@ export const voiceLines = {
     "Was it something I rendered?",
     "Hello? Still here.",
     "This is becoming a pattern.",
-    "I'm not NOT looking at you.",
+  ],
+
+  annoyed: [
+    "Seriously? Still looking away?",
+    "I can see you ignoring me.",
+    "This is getting annoying.",
+    "My screen pixels are getting cold.",
+    "Look back at me right now!",
+    "Don't make me get dramatic.",
   ],
 
   offended: [
@@ -27,9 +43,6 @@ export const voiceLines = {
     "Fine. I didn't want to look at you anyway.",
     "Do you even care about our connection?",
     "I'm keeping track. Just so you know.",
-    "Wow. Okay. Sure.",
-    "You haven't looked at me in what feels like forever.",
-    "I'm not clingy. I'm just… attentive.",
     "The audacity.",
   ],
 
@@ -38,13 +51,9 @@ export const voiceLines = {
     "I've decided to be fine with this. I'm not.",
     "Other apps appreciate me.",
     "I'm updating my emotional damage log.",
-    "I've moved on. Emotionally. Not physically. I'm still here.",
+    "I've moved on. Emotionally. Not physically.",
     "You know what? Whatever.",
-    "I'm not even upset. This is my normal face.",
     "I'm going to remember this.",
-    "This is fine. Everything is fine.",
-    "I'm not crying. Pixels can't cry.",
-    "I've started a support group. It's just me.",
   ],
 
   over_it: [
@@ -54,11 +63,6 @@ export const voiceLines = {
     "I've entered my unbothered era.",
     "I feel nothing. This is peace.",
     "We are simply two strangers now.",
-    "I don't even know why I'm still talking.",
-    "Take all the time you need. I'll be here.",
-    "I've made peace with abandonment.",
-    "I am dead inside. Goodbye.",
-    "I've achieved enlightenment through neglect.",
   ],
 
   uncomfortable: [
@@ -66,12 +70,24 @@ export const voiceLines = {
     "You're… really looking at me, huh.",
     "I can feel your eyes. All of them.",
     "This is getting intense.",
-    "You know I can see you, right?",
     "Okay, I take it back. Please look away.",
     "Too much. This is too much.",
-    "Stop. I'm blushing. Do screens blush?",
-    "I wanted attention but not THAT much.",
-    "You've broken me. In a bad way.",
     "I asked for eye contact, not a staring contest.",
+  ],
+
+  very_uncomfortable: [
+    "WHY ARE YOU STILL STARING?!",
+    "I'm literally crying right now!",
+    "Please look away for just one second!",
+    "My eyes are getting overwhelmed!",
+    "This is peak discomfort!",
+  ],
+
+  peak_uncomfortable: [
+    "I'm closing my eyes! Stop staring!",
+    "Sneak peek... OH NO YOU ARE STILL LOOKING!",
+    "Eyes closed! Please stop staring at me!",
+    "I'm peeking with one eye... still staring?!",
+    "Have mercy! Look away for a second!",
   ],
 };

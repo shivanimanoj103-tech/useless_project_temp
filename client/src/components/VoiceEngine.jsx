@@ -28,7 +28,7 @@ export function VoiceEngine({
     return available[Math.floor(Math.random() * available.length)];
   }
 
-  function speakText(text, targetLang, isTest = false) {
+  function speakText(text, targetLang, isTest = false, isTransition = false) {
     if (!text) return;
 
     if (onSubtitleChange) {
@@ -39,11 +39,12 @@ export function VoiceEngine({
 
     const now = Date.now();
     const cooldownMs = dialogueCooldown * 1000;
-    if (!isTest && now - lastSpokenRef.current < cooldownMs && lastSpokenRef.current !== 0) {
+    // Apply cooldown ONLY for repetitive periodic speech within the same state, NOT for state transitions or tests
+    if (!isTest && !isTransition && now - lastSpokenRef.current < cooldownMs && lastSpokenRef.current !== 0) {
       return;
     }
 
-    // 1. Cancel previous speech to prevent overlapping/queueing
+    // 1. Cancel previous speech immediately to prevent overlapping or stale sentences
     window.speechSynthesis.cancel();
 
     // 2. Create ONE new utterance
@@ -108,7 +109,7 @@ export function VoiceEngine({
         ? "ഹലോ! ഇത് വൈകാരിക സംഭാഷണ സംവിധാനത്തിന്റെ ഒരു പരീക്ഷണമാണ്."
         : "Hello! This is a test of the emotional voice system.";
 
-    speakText(testText, language, true);
+    speakText(testText, language, true, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testVoiceTrigger]);
 
@@ -117,14 +118,29 @@ export function VoiceEngine({
     if (state === prevStateRef.current) return;
     prevStateRef.current = state;
 
+    // Cancel old speech immediately whenever state changes!
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
     const dlg = getActiveDialogue(state);
-    if (!dlg) return;
+    if (!dlg) {
+      if (onSubtitleChange) {
+        onSubtitleChange({ text: '', isSpeaking: false, language });
+      }
+      return;
+    }
 
     const textToSpeak = language === 'ml' ? (dlg.malayalam || dlg.english) : (dlg.english || dlg.malayalam);
 
+    // Immediately display corresponding subtitle
+    if (onSubtitleChange) {
+      onSubtitleChange({ text: textToSpeak, isSpeaking: true, language });
+    }
+
     const timer = setTimeout(() => {
-      speakText(textToSpeak, language, false);
-    }, 400);
+      speakText(textToSpeak, language, false, true);
+    }, 120);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

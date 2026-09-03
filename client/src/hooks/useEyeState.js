@@ -1,22 +1,32 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
- * Base transition thresholds in seconds.
- * These base values are scaled dynamically by the user's `stateThreshold` setting.
+ * Branch A: User is LOOKING at the eyes
+ * Progression: FRIENDLY → SHY → UNCOMFORTABLE → VERY UNCOMFORTABLE → PEAK UNCOMFORTABLE
  */
-const BASE_TIMINGS = {
-  // Away timings (seconds without eye contact)
-  mild_annoyance: 4,
-  annoyed: 9,
-  offended: 16,
-  petty: 28,
-  over_it: 48,
+const BRANCH_A_TIMINGS = [
+  { state: 'friendly',           time: 0 },
+  { state: 'shy',                time: 3.5 },
+  { state: 'uncomfortable',      time: 7.0 },
+  { state: 'very_uncomfortable',  time: 12.0 },
+  { state: 'peak_uncomfortable',  time: 17.0 },
+];
 
-  // Staring timings (sustained seconds of eye contact)
-  uncomfortable_enter: 6,       // Normal uncomfortable
-  very_uncomfortable_enter: 11, // High discomfort + tears start appearing
-  peak_uncomfortable_enter: 16, // Peak uncomfortable (eyes close + sneak peek cycle)
-};
+/**
+ * Branch B: User is LOOKING AWAY from the eyes
+ * Progression: IGNORED → MILD ANNOYANCE → ANNOYED → OFFENDED → PETTY → OVER IT
+ */
+const BRANCH_B_TIMINGS = [
+  { state: 'ignored',        time: 0 },
+  { state: 'mild_annoyance', time: 4.0 },
+  { state: 'annoyed',        time: 9.0 },
+  { state: 'offended',       time: 16.0 },
+  { state: 'petty',          time: 28.0 },
+  { state: 'over_it',        time: 45.0 },
+];
+
+const BRANCH_A_SET = new Set(BRANCH_A_TIMINGS.map((item) => item.state));
+const BRANCH_B_SET = new Set(BRANCH_B_TIMINGS.map((item) => item.state));
 
 function nowStr() {
   return new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -28,17 +38,17 @@ export function useEyeState(isLookingAtScreen) {
   const [transitions, setTransitions] = useState([]);
 
   // ── Configurable debug parameters with natural defaults ────────────────────
-  const [stateThreshold, setStateThreshold] = useState(5);        // Range 1-10 (higher = slower/more evidence required)
-  const [transitionDelay, setTransitionDelay] = useState(1.5);    // Range 0.5-5s (debounce threshold before state change)
-  const [eyeMovementSpeed, setEyeMovementSpeed] = useState(0.08);  // Range 0.02-0.20 (interpolation speed for pupils)
-  const [discomfortIntensity, setDiscomfortIntensity] = useState(5); // Range 1-10 (intensity of uncomfortable reactions)
+  const [stateThreshold, setStateThreshold] = useState(5);        // Range 1-10 (default 5 = 1.0x scale)
+  const [transitionDelay, setTransitionDelay] = useState(0.3);    // Range 0.1-1.0s (debounce for cross-branch switch <= 1s)
+  const [eyeMovementSpeed, setEyeMovementSpeed] = useState(0.08);  // Range 0.02-0.20
+  const [discomfortIntensity, setDiscomfortIntensity] = useState(5); // Range 1-10
   const [sneakPeekDuration, setSneakPeekDuration] = useState(1.2);  // Range 0.5-3s (how long one-eye peek lasts)
-  const [sneakPeekCooldown, setSneakPeekCooldown] = useState(3.0);  // Range 1-6s (delay between sneak peeks)
+  const [sneakPeekCooldown, setSneakPeekCooldown] = useState(2.5);  // Range 1-6s (delay between sneak peeks)
 
   // Sneak peek & tear runtime state exposed to renderer
   const [sneakPeekInfo, setSneakPeekInfo] = useState({
     eye: null,        // 'left' | 'right' | null
-    phase: 'closed',  // 'closed' | 'peeking' | 'cooldown'
+    phase: 'none',    // 'closed' | 'peeking' | 'none'
     discomfortLevel: 0, // 0 to 1 float driving tear generation and eyelid strain
   });
 
@@ -65,22 +75,19 @@ export function useEyeState(isLookingAtScreen) {
   useEffect(() => { peakCoolRef.current = sneakPeekCooldown; }, [sneakPeekCooldown]);
   useEffect(() => { discIntRef.current = discomfortIntensity; }, [discomfortIntensity]);
 
-  // Debounce & state transition validation tracking
-  const pendingStateRef = useRef(null);
-  const pendingTimeRef = useRef(0);
+  // Fast Cross-Branch Switch Debounce Tracker (guaranteed <= 1.0s)
+  const pendingBranchRef = useRef(null);
+  const pendingBranchTimeRef = useRef(0);
 
-  // Initial "Friendly" → "Shy" expression tracking
-  const firstContactDoneRef = useRef(false);
-  const friendlyTimerRef = useRef(0);
-  const shyTimerRef = useRef(0);
-
-  // Peak Uncomfortable state machine tracking
-  const peakPhaseRef = useRef('closed'); // 'closed' | 'peeking' | 'cooldown'
+  // Peak Uncomfortable sneak-peek state machine
+  const peakPhaseRef = useRef('closed'); // 'closed' | 'peeking'
   const peakTimerRef = useRef(0);
-  const sneakEyeRef = useRef(null);
+  const sneakEyeRef = useRef('left');
   const discomfortLevelRef = useRef(0);
 
-  useEffect(() => { isLookingRef.current = isLookingAtScreen; }, [isLookingAtScreen]);
+  useEffect(() => {
+    isLookingRef.current = isLookingAtScreen;
+  }, [isLookingAtScreen]);
 
   /** Execute a verified state transition */
   const doTransition = useCallback((newState) => {
@@ -99,10 +106,17 @@ export function useEyeState(isLookingAtScreen) {
 
   /** Force a specific state (for debug panel) */
   const forceState = useCallback((newState) => {
-    awayRef.current = 0;
-    contactRef.current = 0;
-    pendingStateRef.current = null;
-    pendingTimeRef.current = 0;
+    if (BRANCH_A_SET.has(newState)) {
+      const entry = BRANCH_A_TIMINGS.find((item) => item.state === newState);
+      contactRef.current = (entry ? entry.time : 0) * (thresholdRef.current / 5) + 0.1;
+      awayRef.current = 0;
+    } else {
+      const entry = BRANCH_B_TIMINGS.find((item) => item.state === newState);
+      awayRef.current = (entry ? entry.time : 0) * (thresholdRef.current / 5) + 0.1;
+      contactRef.current = 0;
+    }
+    pendingBranchRef.current = null;
+    pendingBranchTimeRef.current = 0;
     if (newState === 'peak_uncomfortable') {
       peakPhaseRef.current = 'closed';
       peakTimerRef.current = 0;
@@ -127,95 +141,67 @@ export function useEyeState(isLookingAtScreen) {
       const looking = isLookingRef.current;
       const cur = stateRef.current;
 
-      // Calculate time multiplier based on stateThreshold setting (1..10, where 5 is default 1.0x multiplier)
-      const thresholdScale = thresholdRef.current / 5;
-      const effectiveDelay = delayRef.current * thresholdScale;
+      // Time multiplier based on stateThreshold setting (1..10, 5 = 1.0x)
+      const thresholdScale = Math.max(0.2, thresholdRef.current / 5);
 
-      // ── 1. Initial "Friendly" → "Shy" Eye Contact Reaction ──────────────
-      if (looking && !firstContactDoneRef.current && cur !== 'shy') {
-        if (cur !== 'friendly') {
-          doTransition('friendly');
-        }
-        friendlyTimerRef.current += delta;
-        if (friendlyTimerRef.current >= 3.5) {
-          // Friendly greet done — slide into Shy mode
-          doTransition('shy');
-          shyTimerRef.current = 0;
-        }
-      } else if (cur === 'friendly') {
-        // If user looks away during initial friendly state, skip shy → mild annoyance
-        if (!looking) {
-          firstContactDoneRef.current = true;
-          doTransition('mild_annoyance');
-        }
-      } else if (cur === 'shy') {
-        // Shy phase: eyes look away for 4 seconds then settle into ignored
-        shyTimerRef.current += delta;
-        if (shyTimerRef.current >= 4.0) {
-          firstContactDoneRef.current = true;
-          doTransition('ignored');
-        }
-        // If user looks away while we're shy, end shy early → mild annoyance
-        if (!looking) {
-          firstContactDoneRef.current = true;
-          doTransition('mild_annoyance');
-        }
-      }
+      // Determine Target Branch vs Current Branch
+      const targetBranch = looking ? 'A' : 'B';
+      const currentBranch = BRANCH_A_SET.has(cur) ? 'A' : 'B';
 
-      // ── 2. Determine Candidate Next State ────────────────────────────────
-      let candidateState = cur;
+      // ── 1. CROSS-BRANCH SWITCHING (MAX RESPONSE TIME <= 1.0 SECOND) ────────
+      if (targetBranch !== currentBranch) {
+        // Debounce to filter micro-glitches/single-frame blinks (e.g. 0.25s, strictly <= 0.5s)
+        const branchDebounce = Math.min(0.35, Math.max(0.15, delayRef.current));
 
-      if (cur !== 'friendly') {
-        if (looking) {
-          // User IS looking at screen
-          awayRef.current = 0;
-          contactRef.current += delta;
-
-          if (cur === 'peak_uncomfortable') {
-            // In Peak Uncomfortable mode — handle sneak peek sub-state machine
-            candidateState = 'peak_uncomfortable';
-          } else if (cur === 'very_uncomfortable') {
-            if (contactRef.current >= BASE_TIMINGS.peak_uncomfortable_enter * thresholdScale) {
-              candidateState = 'peak_uncomfortable';
+        if (pendingBranchRef.current === targetBranch) {
+          pendingBranchTimeRef.current += delta;
+          if (pendingBranchTimeRef.current >= branchDebounce) {
+            // GAZE DIRECTION CHANGED! Switch branch immediately and reset timers.
+            if (targetBranch === 'A') {
+              // LOOKING AT SCREEN → BRANCH A starts at FRIENDLY immediately
+              contactRef.current = 0;
+              awayRef.current = 0;
+              doTransition('friendly');
+            } else {
+              // LOOKING AWAY → BRANCH B starts at IGNORED immediately
+              awayRef.current = 0;
+              contactRef.current = 0;
+              doTransition('ignored');
             }
-          } else if (cur === 'uncomfortable') {
-            if (contactRef.current >= BASE_TIMINGS.very_uncomfortable_enter * thresholdScale) {
-              candidateState = 'very_uncomfortable';
-            }
-          } else if (cur !== 'ignored') {
-            // Eye contact forgives annoyance states back to ignored
-            candidateState = 'ignored';
-          } else if (contactRef.current >= BASE_TIMINGS.uncomfortable_enter * thresholdScale) {
-            candidateState = 'uncomfortable';
+            pendingBranchRef.current = null;
+            pendingBranchTimeRef.current = 0;
           }
         } else {
-          // User IS NOT looking at screen
-          contactRef.current = 0;
-          awayRef.current += delta;
-
-          // Looking away forgives uncomfortable / peak uncomfortable states back to normal!
-          if (cur === 'uncomfortable' || cur === 'very_uncomfortable' || cur === 'peak_uncomfortable') {
-            candidateState = 'ignored';
-          } else {
-            // Progressively increase annoyance states based on time away
-            if (awayRef.current >= BASE_TIMINGS.over_it * thresholdScale) candidateState = 'over_it';
-            else if (awayRef.current >= BASE_TIMINGS.petty * thresholdScale) candidateState = 'petty';
-            else if (awayRef.current >= BASE_TIMINGS.offended * thresholdScale) candidateState = 'offended';
-            else if (awayRef.current >= BASE_TIMINGS.annoyed * thresholdScale) candidateState = 'annoyed';
-            else if (awayRef.current >= BASE_TIMINGS.mild_annoyance * thresholdScale) candidateState = 'mild_annoyance';
-          }
+          pendingBranchRef.current = targetBranch;
+          pendingBranchTimeRef.current = 0;
         }
-      }
+      } else {
+        // Gaze is consistent with current branch
+        pendingBranchRef.current = null;
+        pendingBranchTimeRef.current = 0;
 
-      // ── 3. Debounce & State Threshold Timing Verification ───────────────
-      // Prevent rapid switching by requiring candidateState to be held consistently
-      if (candidateState !== cur) {
-        if (pendingStateRef.current === candidateState) {
-          pendingTimeRef.current += delta;
-          if (pendingTimeRef.current >= effectiveDelay) {
+        // ── 2. PROGRESSION WITHIN ACTIVE BRANCH ──────────────────────────────
+        if (currentBranch === 'A') {
+          // BRANCH A: User is continuously looking at the eyes
+          awayRef.current = 0;
+          contactRef.current += delta;
+          const t = contactRef.current;
+
+          let candidateState = 'friendly';
+          if (t >= 17.0 * thresholdScale) {
+            candidateState = 'peak_uncomfortable';
+          } else if (t >= 12.0 * thresholdScale) {
+            candidateState = 'very_uncomfortable';
+          } else if (t >= 7.0 * thresholdScale) {
+            candidateState = 'uncomfortable';
+          } else if (t >= 3.5 * thresholdScale) {
+            candidateState = 'shy';
+          } else {
+            candidateState = 'friendly';
+          }
+
+          if (candidateState !== cur) {
             doTransition(candidateState);
-            pendingStateRef.current = null;
-            pendingTimeRef.current = 0;
             if (candidateState === 'peak_uncomfortable') {
               peakPhaseRef.current = 'closed';
               peakTimerRef.current = 0;
@@ -223,66 +209,79 @@ export function useEyeState(isLookingAtScreen) {
             }
           }
         } else {
-          pendingStateRef.current = candidateState;
-          pendingTimeRef.current = 0;
+          // BRANCH B: User is continuously looking away
+          contactRef.current = 0;
+          awayRef.current += delta;
+          const t = awayRef.current;
+
+          let candidateState = 'ignored';
+          if (t >= 45.0 * thresholdScale) {
+            candidateState = 'over_it';
+          } else if (t >= 28.0 * thresholdScale) {
+            candidateState = 'petty';
+          } else if (t >= 16.0 * thresholdScale) {
+            candidateState = 'offended';
+          } else if (t >= 9.0 * thresholdScale) {
+            candidateState = 'annoyed';
+          } else if (t >= 4.0 * thresholdScale) {
+            candidateState = 'mild_annoyance';
+          } else {
+            candidateState = 'ignored';
+          }
+
+          if (candidateState !== cur) {
+            doTransition(candidateState);
+          }
         }
-      } else {
-        pendingStateRef.current = null;
-        pendingTimeRef.current = 0;
       }
 
-      // ── 4. Peak Uncomfortable & One-Eye Sneak Peek Logic ────────────────
+      // ── 3. PEAK UNCOMFORTABLE SNEAK-PEEK BEHAVIOR (MUST NOT CRY) ───────────
       if (stateRef.current === 'peak_uncomfortable') {
         peakTimerRef.current += delta;
 
         if (peakPhaseRef.current === 'closed') {
-          // Phase A: Eyes fully closed because user is staring
+          // Both eyes fully closed
           if (peakTimerRef.current >= peakCoolRef.current) {
-            // Transition to Phase B: Sneak peek with ONE eye
+            // Open ONE eye for sneak peek
             peakPhaseRef.current = 'peeking';
             peakTimerRef.current = 0;
             sneakEyeRef.current = Math.random() > 0.5 ? 'left' : 'right';
-            console.log(`[Needy] 🙈 Sneak peek triggered with ${sneakEyeRef.current} eye`);
           }
         } else if (peakPhaseRef.current === 'peeking') {
-          // Phase B: One-eye sneak peek active
+          // One eye peeking
           if (peakTimerRef.current >= peakDurRef.current) {
-            // End of peek — check if user is STILL staring
-            if (!isLookingRef.current) {
-              // User stopped staring! Recover from peak uncomfortable!
-              console.log('[Needy] 😌 User looked away during sneak peek! Recovering...');
-              contactRef.current = 0;
-              awayRef.current = 0;
-              doTransition('ignored');
-            } else {
-              // User IS STILL STARING! Close eyes again & restart cooldown
-              console.log('[Needy] 😳 User STILL staring! Closing eyes again...');
-              peakPhaseRef.current = 'closed';
-              peakTimerRef.current = 0;
-            }
+            // Close eye again and wait cooldown
+            peakPhaseRef.current = 'closed';
+            peakTimerRef.current = 0;
           }
         }
       }
 
-      // ── 5. Calculate Tear & Discomfort Level (0.0 to 1.0) ───────────────
+      // ── 4. CALCULATE DISCOMFORT & TEAR LEVEL (0.0 to 1.0) ──────────────────
+      // IMPORTANT: Peak uncomfortable MUST NOT CRY. Tears only in very_uncomfortable.
       let targetDiscomfort = 0;
       const intensityScale = discIntRef.current / 5;
 
       switch (stateRef.current) {
-        case 'friendly': case 'shy': case 'ignored': targetDiscomfort = 0.0; break;
-        case 'mild_annoyance': targetDiscomfort = 0.1 * intensityScale; break;
-        case 'annoyed': targetDiscomfort = 0.35 * intensityScale; break;
-        case 'offended': targetDiscomfort = 0.55 * intensityScale; break;
-        case 'petty': targetDiscomfort = 0.65 * intensityScale; break;
-        case 'over_it': targetDiscomfort = 0.40 * intensityScale; break;
-        case 'uncomfortable': targetDiscomfort = 0.70 * intensityScale; break;
-        case 'very_uncomfortable': targetDiscomfort = 0.90 * intensityScale; break;
-        case 'peak_uncomfortable': targetDiscomfort = 1.00 * intensityScale; break;
-        default: targetDiscomfort = 0.0;
+        case 'uncomfortable':
+          // Subtle eye moisture sheen, do NOT start crying yet
+          targetDiscomfort = 0.30 * intensityScale;
+          break;
+        case 'very_uncomfortable':
+          // High moisture + tears begin forming and falling
+          targetDiscomfort = 0.85 * intensityScale;
+          break;
+        case 'peak_uncomfortable':
+          // MUST NOT CRY! Extreme embarrassment/closed eyes only
+          targetDiscomfort = 0.0;
+          break;
+        default:
+          targetDiscomfort = 0.0;
+          break;
       }
 
-      // Smoothly interpolate discomfort level toward target
-      discomfortLevelRef.current += (targetDiscomfort - discomfortLevelRef.current) * 0.05;
+      // Smoothly interpolate discomfort level
+      discomfortLevelRef.current += (targetDiscomfort - discomfortLevelRef.current) * 0.08;
 
       // Sync sneak peek runtime info to state
       setSneakPeekInfo({

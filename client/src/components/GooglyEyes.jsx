@@ -7,18 +7,17 @@ const BG = '#0d0618';
  * Visual configuration per emotional state.
  */
 const STATE_CONFIGS = {
-  friendly:   { lidT: 0.05, lidB: 0.38, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
-  // ── Shy: eyes cast down, pupils averted, soft blush pink ──
-  shy:        { lidT: 0.35, lidB: 0.18, pupR: 0.36, hue: '#f9a8d4', wander: 0.10, lerpSpd: 0.04, dartEvery: 55 },
-  ignored:    { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.20, lerpSpd: 0.05, dartEvery: 90 },
-  mild_annoyance: { lidT: 0.25, lidB: 0.05, pupR: 0.40, hue: '#f59e0b', wander: 0.28, lerpSpd: 0.05, dartEvery: 80 },
-  annoyed:    { lidT: 0.40, lidB: 0.06, pupR: 0.38, hue: '#f97316', wander: 0.35, lerpSpd: 0.06, dartEvery: 65 },
-  offended:   { lidT: 0.55, lidB: 0.06, pupR: 0.36, hue: '#ef4444', wander: 0.45, lerpSpd: 0.06, dartEvery: 50 },
-  petty:      { lidT: 0.68, lidB: 0.06, pupR: 0.32, hue: '#a855f7', wander: 0.55, lerpSpd: 0.05, dartEvery: 100 },
-  over_it:    { lidT: 0.82, lidB: 0.04, pupR: 0.28, hue: '#64748b', wander: 0.60, lerpSpd: 0.04, dartEvery: 120 },
-  uncomfortable:      { lidT: 0.15, lidB: 0.10, pupR: 0.25, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 45 },
-  very_uncomfortable: { lidT: 0.30, lidB: 0.20, pupR: 0.22, hue: '#0284c7', wander: 0.40, lerpSpd: 0.09, dartEvery: 35 },
-  peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.25, lerpSpd: 0.10, dartEvery: 30 },
+  friendly:           { lidT: 0.05, lidB: 0.35, pupR: 0.44, hue: '#4ade80', wander: 0.15, lerpSpd: 0.06, dartEvery: 120 },
+  shy:                { lidT: 0.35, lidB: 0.18, pupR: 0.36, hue: '#f9a8d4', wander: 0.10, lerpSpd: 0.04, dartEvery: 55 },
+  uncomfortable:      { lidT: 0.20, lidB: 0.18, pupR: 0.28, hue: '#06b6d4', wander: 0.35, lerpSpd: 0.08, dartEvery: 40 },
+  very_uncomfortable: { lidT: 0.35, lidB: 0.25, pupR: 0.22, hue: '#0284c7', wander: 0.45, lerpSpd: 0.10, dartEvery: 28 },
+  peak_uncomfortable: { lidT: 1.00, lidB: 1.00, pupR: 0.20, hue: '#38bdf8', wander: 0.15, lerpSpd: 0.10, dartEvery: 40 },
+  ignored:            { lidT: 0.08, lidB: 0.04, pupR: 0.42, hue: '#5b86e5', wander: 0.20, lerpSpd: 0.05, dartEvery: 90 },
+  mild_annoyance:     { lidT: 0.25, lidB: 0.05, pupR: 0.40, hue: '#f59e0b', wander: 0.28, lerpSpd: 0.05, dartEvery: 80 },
+  annoyed:            { lidT: 0.42, lidB: 0.08, pupR: 0.36, hue: '#f97316', wander: 0.35, lerpSpd: 0.06, dartEvery: 65 },
+  offended:           { lidT: 0.58, lidB: 0.10, pupR: 0.34, hue: '#ef4444', wander: 0.45, lerpSpd: 0.06, dartEvery: 50 },
+  petty:              { lidT: 0.70, lidB: 0.08, pupR: 0.30, hue: '#a855f7', wander: 0.55, lerpSpd: 0.05, dartEvery: 100 },
+  over_it:            { lidT: 0.84, lidB: 0.05, pupR: 0.26, hue: '#64748b', wander: 0.60, lerpSpd: 0.03, dartEvery: 140 },
 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -437,42 +436,47 @@ export function GooglyEyes({
       drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: irisHue, px: a.rpx, py: a.rpy, wetness });
 
       // ── Precise Tear Formation at Lower Inner Eye Duct ───────────────────
-      const intensity = tSet.tearIntensity || 0.6;
-      if (discomfort > 0.15 && Math.random() < 0.08 * discomfort * intensity) {
-        const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
-        const userOffX = tSet.originX || 0;
-        const userOffY = tSet.originY || 0;
-        const baseScale = tSet.tearSize || 1.5;
+      // IMPORTANT: Peak uncomfortable MUST NOT CRY. Only very_uncomfortable spawns tears.
+      if (curState === 'peak_uncomfortable') {
+        a.tears = []; // Clear active tears immediately
+      } else if (curState === 'very_uncomfortable') {
+        const intensity = tSet.tearIntensity || 0.6;
+        if (Math.random() < 0.05 * discomfort * intensity) {
+          const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
+          const userOffX = tSet.originX || 0;
+          const userOffY = tSet.originY || 0;
+          const baseScale = tSet.tearSize || 1.5;
 
-        // Inner lower tear duct origin on eye surface
-        const getOriginX = () => {
-          if (eyeChoice === 'left') {
-            return lx + R * 0.38 + userOffX; // Inner duct facing nose
-          } else {
-            return rx - R * 0.38 - userOffX; // Inner duct facing nose
-          }
-        };
+          // Inner lower tear duct origin on eye surface
+          const getOriginX = () => {
+            if (eyeChoice === 'left') {
+              return lx + R * 0.38 + userOffX; // Inner duct facing nose
+            } else {
+              return rx - R * 0.38 - userOffX; // Inner duct facing nose
+            }
+          };
 
-        const getOriginY = () => ey + R * 0.42 + userOffY;
+          const getOriginY = () => ey + R * 0.42 + userOffY;
 
-        a.tears.push({
-          eye: eyeChoice,
-          phase: 'attached', // Anchored directly on lower inner eye surface
-          getOriginX,
-          getOriginY,
-          x: getOriginX(),
-          y: getOriginY(),
-          startX: getOriginX(),
-          startY: getOriginY(),
-          size: 0.5,
-          targetSize: (2.5 + Math.random() * 2.0) * baseScale,
-          accumTime: 0,
-          pathProgress: 0,
-          wobble: Math.random() * Math.PI * 2,
-          alpha: 0.1,
-          elongation: 1.0,
-          vy: 0,
-        });
+          a.tears.push({
+            eye: eyeChoice,
+            phase: 'attached', // Anchored directly on lower inner eye surface
+            getOriginX,
+            getOriginY,
+            x: getOriginX(),
+            y: getOriginY(),
+            startX: getOriginX(),
+            startY: getOriginY(),
+            size: 0.5,
+            targetSize: (2.5 + Math.random() * 2.0) * baseScale,
+            accumTime: 0,
+            pathProgress: 0,
+            wobble: Math.random() * Math.PI * 2,
+            alpha: 0.1,
+            elongation: 1.0,
+            vy: 0,
+          });
+        }
       }
 
       renderRealisticTears(ctx, a.tears, discomfort, tSet, R);

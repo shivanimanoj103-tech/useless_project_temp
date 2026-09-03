@@ -118,6 +118,7 @@ export const defaultDialogues = [
 
 export const voiceLines = {
   friendly: defaultDialogues.filter(d => d.state === 'friendly').map(d => d.english),
+  shy: defaultDialogues.filter(d => d.state === 'shy').map(d => d.english),
   ignored: defaultDialogues.filter(d => d.state === 'ignored').map(d => d.english),
   mild_annoyance: defaultDialogues.filter(d => d.state === 'mild_annoyance').map(d => d.english),
   annoyed: defaultDialogues.filter(d => d.state === 'annoyed').map(d => d.english),

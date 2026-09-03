@@ -11,17 +11,17 @@ import { defaultDialogues } from './data/voiceLines';
 
 // Comprehensive emotional state metadata
 const STATE_META = {
-  friendly: { label: 'HAPPY TO SEE YOU', msg: "Yay! You're back! I love attention!", color: '#4ade80' },
-  shy:      { label: 'SHY 🌸', msg: "D-don't look at me that way… I mean it!", color: '#f9a8d4' },
-  ignored:  { label: 'I See You', msg: "Hey. You came back. No big deal. (It's a big deal.)", color: '#5b86e5' },
-  mild_annoyance: { label: 'Mild Annoyance', msg: "Oh, is something else more interesting than me?", color: '#f59e0b' },
-  annoyed: { label: 'Annoyed', msg: "Seriously? Still looking away? I am right here.", color: '#f97316' },
-  offended: { label: 'Offended', msg: "I'm starting to take this personally.", color: '#ef4444' },
-  petty: { label: 'Petty', msg: "Fine. Whatever. I've moved on. (I haven't.)", color: '#a855f7' },
-  over_it: { label: 'Over It', msg: "I have achieved emotional detachment. Goodbye forever.", color: '#64748b' },
-  uncomfortable: { label: 'UNCOMFORTABLE', msg: "OKAY. TOO MUCH. You can stop now. Please.", color: '#06b6d4' },
-  very_uncomfortable: { label: 'VERY UNCOMFORTABLE 💧', msg: "WHY ARE YOU STILL STARING?! I am getting teary-eyed!", color: '#0284c7' },
-  peak_uncomfortable: { label: 'PEAK UNCOMFORTABLE 🙈', msg: "EYES CLOSED! Peeking with one eye... PLEASE STOP STARING!", color: '#38bdf8' },
+  friendly:           { label: 'FRIENDLY 😊', msg: "Yay! You're looking at me! Welcome!", color: '#4ade80' },
+  shy:                { label: 'SHY 🌸', msg: "D-don't look at me that way… it's embarrassing.", color: '#f9a8d4' },
+  uncomfortable:      { label: 'UNCOMFORTABLE 😬', msg: "You're making me uncomfortable. Too much eye contact...", color: '#06b6d4' },
+  very_uncomfortable: { label: 'VERY UNCOMFORTABLE 😰', msg: "WHY ARE YOU STILL STARING?! My eyes are tearing up!", color: '#0284c7' },
+  peak_uncomfortable: { label: 'PEAK UNCOMFORTABLE 🙈', msg: "PLEASE STOP LOOKING! I have to close my eyes...", color: '#38bdf8' },
+  ignored:            { label: 'IGNORED 👀', msg: "Hey... looking away already? I'm over here.", color: '#5b86e5' },
+  mild_annoyance:     { label: 'MILD ANNOYANCE 😒', msg: "Oh, is something else more interesting than me?", color: '#f59e0b' },
+  annoyed:            { label: 'ANNOYED 😤', msg: "Seriously? Why are you still looking away?", color: '#f97316' },
+  offended:           { label: 'OFFENDED 😠', msg: "I'm starting to take this personally.", color: '#ef4444' },
+  petty:              { label: 'PETTY 🙄', msg: "Fine. Whatever. I've moved on.", color: '#a855f7' },
+  over_it:            { label: 'OVER IT 😑', msg: "I have achieved emotional detachment. Goodbye.", color: '#64748b' },
 };
 
 // Emotion-responsive background gradient color map

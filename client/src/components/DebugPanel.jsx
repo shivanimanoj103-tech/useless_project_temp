@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 
-const ALL_STATES = [
+const ALL_STATES_BRANCH_A = [
   'friendly',
   'shy',
+  'uncomfortable',
+  'very_uncomfortable',
+  'peak_uncomfortable',
+];
+
+const ALL_STATES_BRANCH_B = [
   'ignored',
   'mild_annoyance',
   'annoyed',
   'offended',
   'petty',
   'over_it',
-  'uncomfortable',
-  'very_uncomfortable',
-  'peak_uncomfortable',
 ];
 
 function Row({ label, children }) {
@@ -420,9 +423,23 @@ export function DebugPanel({
         <Slider label={`Timer Speed: ×${speed}`} min={1} max={20} step={1}
           value={speed} onChange={handleSpeed} />
 
-        <h5 className="db-sub">Force State</h5>
+        <h5 className="db-sub">Branch A: Looking at Eyes</h5>
         <div className="db-force-grid">
-          {ALL_STATES.map((s) => (
+          {ALL_STATES_BRANCH_A.map((s) => (
+            <button
+              key={s}
+              id={`force-${s}`}
+              className={`db-force-btn${state === s ? ' db-force-btn--active' : ''}`}
+              onClick={() => forceState(s)}
+            >
+              {s.replace(/_/g, ' ')}
+            </button>
+          ))}
+        </div>
+
+        <h5 className="db-sub" style={{ marginTop: '10px' }}>Branch B: Looking Away</h5>
+        <div className="db-force-grid">
+          {ALL_STATES_BRANCH_B.map((s) => (
             <button
               key={s}
               id={`force-${s}`}

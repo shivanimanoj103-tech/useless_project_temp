@@ -40,6 +40,7 @@ function Slider({ label, min, max, step, value, onChange }) {
 }
 
 export function DebugPanel({
+  theme = 'default', setTheme,
   gazeStatus, faceDetected, isLookingAtScreen, yawRatio, pitchRatio,
   thresholds, onThresholdChange,
   state, timers, transitions,
@@ -96,6 +97,29 @@ export function DebugPanel({
           ✖ Close
         </button>
       </div>
+
+      {/* ── Visual Theme ── */}
+      {setTheme && (
+        <section className="db-section">
+          <h4 className="db-heading">Visual Theme</h4>
+          <Row label="Theme Selection">
+            <div className="db-lang-toggle">
+              <button
+                className={`db-force-btn ${theme === 'default' ? 'db-force-btn--active' : ''}`}
+                onClick={() => setTheme('default')}
+              >
+                Default
+              </button>
+              <button
+                className={`db-force-btn ${theme === 'neon-void' ? 'db-force-btn--active' : ''}`}
+                onClick={() => setTheme('neon-void')}
+              >
+                🌌 Neon Void
+              </button>
+            </div>
+          </Row>
+        </section>
+      )}
 
       {/* ── 1. REALISTIC TEARS & ORIGIN CONTROLS ── */}
       <section className="db-section">

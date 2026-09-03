@@ -202,8 +202,18 @@ export default function App() {
     }));
   }
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('needy_theme') || 'default';
+    } catch (_) { return 'default'; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('needy_theme', theme);
+  }, [theme]);
+
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       {/* Hidden webcam preview */}
       <video
         ref={videoRef}
@@ -238,6 +248,14 @@ export default function App() {
               ⚠️ Gaze model failed
             </span>
           )}
+          <button
+            id="theme-toggle"
+            className="btn-ghost"
+            onClick={() => setTheme((t) => (t === 'default' ? 'neon-void' : 'default'))}
+            title="Toggle Visual Theme"
+          >
+            {theme === 'neon-void' ? '🌌 Neon Void' : '🎨 Default'}
+          </button>
           <button
             id="debug-toggle"
             className="btn-ghost"
@@ -288,9 +306,10 @@ export default function App() {
                 opacity: blurSettings.blurOpacity * (0.35 + 0.65 * (sneakPeekInfo?.discomfortLevel || 0.2)),
               }}
             />
-            <div className="eyes-wrap" style={{ '--eye-glow': color }}>
+            <div className="eyes-wrap" style={{ '--eye-glow': theme === 'neon-void' ? '#4fd8ff' : color }}>
               <GooglyEyes
                 state={state}
+                theme={theme}
                 eyeMovementSpeed={eyeMovementSpeed}
                 sneakPeekInfo={sneakPeekInfo}
                 tearSettings={tearSettings}
@@ -346,6 +365,8 @@ export default function App() {
       {/* ── Debug Panel ── */}
       {showDebug && (
         <DebugPanel
+          theme={theme}
+          setTheme={setTheme}
           gazeStatus={gazeStatus}
           faceDetected={faceDetected}
           isLookingAtScreen={isLookingAtScreen}

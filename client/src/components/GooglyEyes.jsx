@@ -268,6 +268,7 @@ function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings, R) {
 // ── GooglyEyes Component ────────────────────────────────────────────────────
 export function GooglyEyes({
   state,
+  theme = 'default',
   eyeMovementSpeed = 0.08,
   sneakPeekInfo,
   tearSettings = {
@@ -288,11 +289,13 @@ export function GooglyEyes({
   const animRef = useRef(null);
 
   const stateRef = useRef(state);
+  const themeRef = useRef(theme);
   const speedRef = useRef(eyeMovementSpeed);
   const sneakRef = useRef(sneakPeekInfo);
   const tearSetRef = useRef(tearSettings);
 
   useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { themeRef.current = theme; }, [theme]);
   useEffect(() => { speedRef.current = eyeMovementSpeed; }, [eyeMovementSpeed]);
   useEffect(() => { sneakRef.current = sneakPeekInfo; }, [sneakPeekInfo]);
   useEffect(() => { tearSetRef.current = tearSettings; }, [tearSettings]);
@@ -323,10 +326,13 @@ export function GooglyEyes({
     function render() {
       const a = A.current;
       const curState = stateRef.current;
+      const curTheme = themeRef.current || 'default';
       const cfg = STATE_CONFIGS[curState] || STATE_CONFIGS.ignored;
       const sneak = sneakRef.current || {};
       const tSet = tearSetRef.current || {};
       const spdMultiplier = speedRef.current || 0.08;
+
+      const irisHue = curTheme === 'neon-void' ? '#4fd8ff' : cfg.hue;
 
       const w = canvas.width;
       const h = canvas.height;
@@ -420,8 +426,8 @@ export function GooglyEyes({
       const wetness = (tSet.eyeWetness || 0.6) * discomfort;
 
       // Render Left & Right Eyes
-      drawEye(ctx, lx, ey, R, { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.lpx, py: a.lpy, wetness });
-      drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: cfg.hue, px: a.rpx, py: a.rpy, wetness });
+      drawEye(ctx, lx, ey, R, { lidT: leftLidT, lidB: leftLidB, pupR: a.pupR, blink: a.blink, hue: irisHue, px: a.lpx, py: a.lpy, wetness });
+      drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: irisHue, px: a.rpx, py: a.rpy, wetness });
 
       // ── Precise Tear Formation at Lower Inner Eye Duct ───────────────────
       const intensity = tSet.tearIntensity || 0.6;

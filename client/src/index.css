@@ -1,16 +1,33 @@
 /* ── Google Font ─────────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
-/* ── Design tokens ───────────────────────────────────────────────────────── */
-:root {
+/* ── Design tokens & Theme System ────────────────────────────────────────── */
+:root, [data-theme="default"] {
   --bg:          #0d0618;
   --bg2:         #130a22;
   --bg3:         #1a0f2e;
   --text:        #f0eaf8;
   --text-muted:  #9b88b0;
   --accent:      #5b86e5;
+  --glow-color:  rgba(91, 134, 229, 0.45);
   --border:      rgba(255, 255, 255, 0.08);
   --glass:       rgba(255, 255, 255, 0.04);
+  --logo-gradient: linear-gradient(135deg, #f0eaf8 30%, #9b88b0 100%);
+  --radius:      12px;
+  --radius-sm:   8px;
+}
+
+[data-theme="neon-void"] {
+  --bg:          #0a0d12;
+  --bg2:         #0e141d;
+  --bg3:         #121b28;
+  --text:        #ffffff;
+  --text-muted:  #709bb0;
+  --accent:      #4fd8ff;
+  --glow-color:  rgba(79, 216, 255, 0.45);
+  --border:      rgba(79, 216, 255, 0.28);
+  --glass:       rgba(10, 20, 34, 0.85);
+  --logo-gradient: linear-gradient(135deg, #ffffff 40%, #4fd8ff 100%);
   --radius:      12px;
   --radius-sm:   8px;
 }
@@ -27,6 +44,7 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.6s ease, color 0.6s ease;
 }
 
 /* ── App shell ───────────────────────────────────────────────────────────── */
@@ -37,7 +55,16 @@ body {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  background: var(--bg);
+  transition: background 0.8s ease;
+}
+
+.app[data-theme="default"] {
   background: radial-gradient(ellipse at 20% 10%, #1a0635 0%, var(--bg) 60%);
+}
+
+.app[data-theme="neon-void"] {
+  background: radial-gradient(ellipse at 50% 35%, #101c2c 0%, #070a0e 75%);
 }
 
 /* Ambient colour glow */
@@ -80,7 +107,7 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.45em;
-  background: linear-gradient(135deg, #f0eaf8 30%, #9b88b0 100%);
+  background: var(--logo-gradient, linear-gradient(135deg, #f0eaf8 30%, #9b88b0 100%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

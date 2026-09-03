@@ -223,7 +223,8 @@ function renderRealisticTears(ctx, tears, discomfortLevel, tearSettings, R) {
 
     // Render realistic glossy liquid tear droplet
     ctx.save();
-    ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, discomfortLevel * 1.25));
+    const effectiveDisc = Math.max(0.6, discomfortLevel || 0);
+    ctx.globalAlpha = Math.max(0, t.alpha * Math.min(1, effectiveDisc * 1.25));
 
     const rx = t.size * (tearSettings.originZ || 1.0);
     const ry = t.size * (t.elongation || 1.0) * (tearSettings.originZ || 1.0);
@@ -284,7 +285,8 @@ export function GooglyEyes({
     originY: 0,
     originZ: 1.0,
     eyeWetness: 0.6,
-  }
+  },
+  hasTearCommand = false,
 }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
@@ -294,12 +296,14 @@ export function GooglyEyes({
   const speedRef = useRef(eyeMovementSpeed);
   const sneakRef = useRef(sneakPeekInfo);
   const tearSetRef = useRef(tearSettings);
+  const hasTearRef = useRef(hasTearCommand);
 
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => { themeRef.current = theme; }, [theme]);
   useEffect(() => { speedRef.current = eyeMovementSpeed; }, [eyeMovementSpeed]);
   useEffect(() => { sneakRef.current = sneakPeekInfo; }, [sneakPeekInfo]);
   useEffect(() => { tearSetRef.current = tearSettings; }, [tearSettings]);
+  useEffect(() => { hasTearRef.current = hasTearCommand; }, [hasTearCommand]);
 
   const A = useRef({
     lpx: 0, lpy: 0, lvx: 0, lvy: 0,
@@ -436,12 +440,15 @@ export function GooglyEyes({
       drawEye(ctx, rx, ey, R, { lidT: rightLidT, lidB: rightLidB, pupR: a.pupR, blink: a.blink, hue: irisHue, px: a.rpx, py: a.rpy, wetness });
 
       // ── Precise Tear Formation at Lower Inner Eye Duct ───────────────────
-      // IMPORTANT: Peak uncomfortable MUST NOT CRY. Only very_uncomfortable spawns tears.
+      // IMPORTANT: Peak uncomfortable MUST NOT CRY.
+      // Tears ONLY form when a command with tear comes to read or as a display!
       if (curState === 'peak_uncomfortable') {
         a.tears = []; // Clear active tears immediately
-      } else if (curState === 'very_uncomfortable') {
+      } else if (hasTearRef.current && (curState === 'very_uncomfortable' || curState === 'uncomfortable')) {
         const intensity = tSet.tearIntensity || 0.6;
-        if (Math.random() < 0.05 * discomfort * intensity) {
+        const formationRate = (tSet.tearFormationSpeed || 1.0) * 0.06;
+        const effectiveDiscomfort = Math.max(0.4, discomfort);
+        if (Math.random() < formationRate * effectiveDiscomfort * intensity) {
           const eyeChoice = Math.random() > 0.5 ? 'left' : 'right';
           const userOffX = tSet.originX || 0;
           const userOffY = tSet.originY || 0;
@@ -476,6 +483,14 @@ export function GooglyEyes({
             elongation: 1.0,
             vy: 0,
           });
+        }
+      } else if (!hasTearRef.current && a.tears.length > 0) {
+        // When no tear command is active, softly fade out any newly forming attached tears
+        for (let i = a.tears.length - 1; i >= 0; i--) {
+          if (a.tears[i].phase === 'attached') {
+            a.tears[i].alpha -= 0.04;
+            if (a.tears[i].alpha <= 0) a.tears.splice(i, 1);
+          }
         }
       }
 

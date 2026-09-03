@@ -149,6 +149,17 @@ export default function App() {
   const color = meta.color;
   const bgTheme = EMOTION_GRADIENTS[state] || EMOTION_GRADIENTS.ignored;
 
+  // Helper to test if dialogue text contains a tear command
+  const hasTearInText = (txt) => {
+    if (!txt || typeof txt !== 'string') return false;
+    return /tear/i.test(txt) || /കണ്ണീർ|നിറയുന്നു/.test(txt);
+  };
+
+  // Make tears ONLY when command with tear comes to read (spoken) or as a display (subtitles shown)
+  const isTearReading = Boolean(dialogueSettings.speechEnabled && subtitleData.isSpeaking && hasTearInText(subtitleData.text));
+  const isTearDisplaying = Boolean(dialogueSettings.showSubtitles && subtitleData.text && hasTearInText(subtitleData.text));
+  const hasTearCommand = isTearReading || isTearDisplaying;
+
   // Track longest eye contact duration
   const maxContactRef = useRef(0);
   if (timers.contactTime > maxContactRef.current) {
@@ -315,6 +326,7 @@ export default function App() {
                 eyeMovementSpeed={eyeMovementSpeed}
                 sneakPeekInfo={sneakPeekInfo}
                 tearSettings={tearSettings}
+                hasTearCommand={hasTearCommand}
               />
             </div>
           </div>
